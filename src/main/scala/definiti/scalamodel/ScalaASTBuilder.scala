@@ -5,7 +5,7 @@ import definiti.api.Context
 
 import scala.io.Source
 
-object ScalaGenerator {
+object ScalaASTBuilder {
   val nativeTypeMapping = Map(
     "Boolean" -> "BooleanWrapper",
     "Date" -> "DateWrapper",
@@ -14,7 +14,7 @@ object ScalaGenerator {
     "String" -> "StringWrapper"
   )
 
-  def generate(root: Root)(implicit context: Context): String = {
+  def build(root: Root)(implicit context: Context): String = {
     val buffer: StringBuilder = new StringBuilder()
 
     appendNative(buffer)
@@ -22,25 +22,16 @@ object ScalaGenerator {
     buffer.append(
       s"""
          |package object verifications {
-         |  ${root.verifications.map(generateVerification).mkString("\n\n")}
+         |  ${root.verifications.map(generateVerification).map(ScalaCodeGenerator.generateStatement).mkString("\n\n")}
          |
-         |  private def verify(message: String)(condition: => Boolean) = {
-         |    if (condition) {
-         |      None
-         |    } else {
-         |      Some(message)
-         |    }
-         |  }
+         |  private def verify(message: String)(condition: => Boolean) =
+         |    if (condition) None else Some(message)
          |}
          |import verifications._
       """.stripMargin
     )
 
-    buffer.append(
-      s"""
-         |${root.classDefinitions.map(generateClassDefinition).mkString("\n\n")}
-       """.stripMargin
-    )
+    buffer.append(root.classDefinitions.map(generateClassDefinition).mkString("\n\n"))
 
     buffer.toString()
   }
@@ -51,21 +42,28 @@ object ScalaGenerator {
     }
   }
 
-  private def generateVerification(verification: Verification)(implicit context: Context): String = {
-    s"""
-       |${verification.comment.map(comment => s"/*$comment*/").getOrElse("")}
-       |def verify${verification.name}(${generateParameters(verification.function.parameters)}): Option[String] = {
-       |  verify("${verification.message}") {
-       |    ${generateExpression(verification.function.body)}
-       |  }
-       |}
-      """.stripMargin
-  }
-
-  private def generateParameters(parameterDefinitions: Seq[ParameterDefinition])(implicit context: Context): String = parameterDefinitions match {
-    case Nil => ""
-    case one :: Nil => generateParameter(one)
-    case seq => seq.map(generateParameter).mkString("(", "), (", ")")
+  private def generateVerification(verification: Verification)(implicit context: Context): ScalaAST.Statement = {
+    // // comments
+    // def verify${name}(${verification.function.parameters}): Option[String] = {
+    //   verify("${verification.message}") {
+    //     ${verification.function.body}
+    //   }
+    // }
+    val body = ScalaAST.CallFunction2(
+      "verify",
+      Seq(ScalaAST.SimpleExpression(s""""${verification.message}"""")),
+      Seq(ScalaAST.Block(Seq(generateExpression(verification.function.body))))
+    )
+    val func = ScalaAST.Def(
+      s"verify${verification.name}",
+      "Option[String]",
+      verification.function.parameters.map(generateParameter),
+      body
+    )
+    verification.comment match {
+      case Some(comment) => ScalaAST.CommentedStatement(ScalaAST.Comment(comment), func)
+      case None => func
+    }
   }
 
   private def generateParametersWithoutExternalBraces(parameterDefinitions: Seq[ParameterDefinition])(implicit context: Context): String = parameterDefinitions match {
@@ -73,10 +71,10 @@ object ScalaGenerator {
     case seq => seq.map(generateParameter).mkString(",")
   }
 
-  private def generateParameter(parameterDefinition: ParameterDefinition)(implicit context: Context): String = {
+  private def generateParameter(parameterDefinition: ParameterDefinition)(implicit context: Context): ScalaAST.Parameter = {
     val parameterName = parameterDefinition.name
     val parameterType = generateParameterType(parameterDefinition.typeReference)
-    s"$parameterName: $parameterType"
+    ScalaAST.Parameter(parameterName, parameterType)
   }
 
   private def generateParameterType(typeReference: AbstractTypeReference)(implicit context: Context): String = {
@@ -98,55 +96,41 @@ object ScalaGenerator {
     }
   }
 
-  private def generateExpression(expression: Expression)(implicit context: Context): String = expression match {
-    case BooleanValue(value, _) => s"new BooleanWrapper(${value.toString})"
-    case NumberValue(value, _) => s"new NumberWrapper(${value.toString})"
-    case QuotedStringValue(value, _) => """new StringWrapper("""" + value.toString.replaceAllLiterally("\\", "\\\\") + """")"""
-    case Variable(variable, _, _) => variable
+  private def generateExpression(expression: Expression)(implicit context: Context): ScalaAST.Expression = expression match {
+    case BooleanValue(value, _) =>
+      ScalaAST.SimpleExpression(s"new BooleanWrapper(${value.toString})")
+    case NumberValue(value, _) =>
+      ScalaAST.SimpleExpression(s"new NumberWrapper(${value.toString})")
+    case QuotedStringValue(value, _) =>
+      ScalaAST.SimpleExpression(s"""new StringWrapper("${value.toString.replaceAllLiterally("\\", "\\\\")}")""")
+    case Variable(variable, _, _) =>
+      ScalaAST.SimpleExpression(variable)
     case MethodCall(inner, method, parameters, _, _) =>
-      s"(${generateExpression(inner)}).$method(${generateCallParameters(parameters)})"
+      ScalaAST.CallMethod(generateExpression(inner), method, parameters.map(generateExpression))
     case AttributeCall(inner, attribute, _) =>
-      s"(${generateExpression(inner)}).$attribute"
+      ScalaAST.CallAttribute(generateExpression(inner), attribute)
     case CombinedExpression(expressions, _) =>
-      expressions.map(generateExpression).mkString("\n")
-    case Condition(condition, onTrue, onFalse, _) =>
-      onFalse match {
-        case Some(onFalseBody) =>
-          s"""
-             |if (${generateExpression(condition)}) {
-             |  ${generateExpression(onTrue)}
-             |} else {
-             |  ${generateExpression(onFalseBody)}
-             |}
-             |""".stripMargin
-        case None =>
-          s"""
-             |if (${generateExpression(condition)}) {
-             |  ${generateExpression(onTrue)}
-             |}
-             |""".stripMargin
-      }
-    case Or(left, right, _) => s"(${generateExpression(left)}) || (${generateExpression(right)})"
-    case And(left, right, _) => s"(${generateExpression(left)}) && (${generateExpression(right)})"
-    case Equal(left, right, _) => s"(${generateExpression(left)}) == (${generateExpression(right)})"
-    case NotEqual(left, right, _) => s"(${generateExpression(left)}) != (${generateExpression(right)})"
-    case Lower(left, right, _) => s"(${generateExpression(left)}) < (${generateExpression(right)})"
-    case Upper(left, right, _) => s"(${generateExpression(left)}) > (${generateExpression(right)})"
-    case LowerOrEqual(left, right, _) => s"(${generateExpression(left)}) <= (${generateExpression(right)})"
-    case UpperOrEqual(left, right, _) => s"(${generateExpression(left)}) >= (${generateExpression(right)})"
-    case Plus(left, right, _) => s"(${generateExpression(left)}) + (${generateExpression(right)})"
-    case Minus(left, right, _) => s"(${generateExpression(left)}) - (${generateExpression(right)})"
-    case Modulo(left, right, _) => s"(${generateExpression(left)}) % (${generateExpression(right)})"
-    case Time(left, right, _) => s"(${generateExpression(left)}) * (${generateExpression(right)})"
-    case Divide(left, right, _) => s"(${generateExpression(left)}) / (${generateExpression(right)})"
-    case Not(inner, _) => s"!(${generateExpression(inner)})"
-    case LambdaExpression(parameterList, inner, _) => s"(${generateParametersWithoutExternalBraces(parameterList)}) => {${generateExpression(inner)}}"
-  }
-
-  private def generateCallParameters(expressions: Seq[Expression])(implicit context: Context): String = expressions match {
-    case Nil => ""
-    case one :: Nil => generateExpression(one)
-    case seq => seq.map(generateExpression).mkString("(", "), (", ")")
+      ScalaAST.Block(expressions.map(generateExpression))
+    case Condition(condition, onTrue, Some(onFalse), _) =>
+      ScalaAST.IfThenElse (generateExpression(condition), generateExpression(onTrue), generateExpression(onFalse))
+    case Condition(condition, onTrue, None, _) =>
+      ScalaAST.IfThen(generateExpression(condition), generateExpression(onTrue))
+    case Or(left, right, _) => ScalaAST.BinaryOp("||", generateExpression(left), generateExpression(right))
+    case And(left, right, _) => ScalaAST.BinaryOp("&&", generateExpression(left), generateExpression(right))
+    case Equal(left, right, _) => ScalaAST.BinaryOp("==", generateExpression(left), generateExpression(right))
+    case NotEqual(left, right, _) => ScalaAST.BinaryOp("!=", generateExpression(left), generateExpression(right))
+    case Lower(left, right, _) => ScalaAST.BinaryOp("< ", generateExpression(left), generateExpression(right))
+    case Upper(left, right, _) => ScalaAST.BinaryOp("> ", generateExpression(left), generateExpression(right))
+    case LowerOrEqual(left, right, _) => ScalaAST.BinaryOp("<=", generateExpression(left), generateExpression(right))
+    case UpperOrEqual(left, right, _) => ScalaAST.BinaryOp(">=", generateExpression(left), generateExpression(right))
+    case Plus(left, right, _) => ScalaAST.BinaryOp("+ ", generateExpression(left), generateExpression(right))
+    case Minus(left, right, _) => ScalaAST.BinaryOp("- ", generateExpression(left), generateExpression(right))
+    case Modulo(left, right, _) => ScalaAST.BinaryOp("% ", generateExpression(left), generateExpression(right))
+    case Time(left, right, _) => ScalaAST.BinaryOp("* ", generateExpression(left), generateExpression(right))
+    case Divide(left, right, _) => ScalaAST.BinaryOp("/ ", generateExpression(left), generateExpression(right))
+    case Not(inner, _) => ScalaAST.UnaryOp("!", generateExpression(inner))
+    case LambdaExpression(parameterList, inner, _) =>
+      ScalaAST.Lambda(parameterList.map(generateParameter), generateExpression(inner))
   }
 
   private def generateClassDefinition(classDefinition: ClassDefinition)(implicit context: Context): String = classDefinition match {

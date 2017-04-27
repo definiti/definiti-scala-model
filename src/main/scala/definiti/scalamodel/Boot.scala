@@ -55,7 +55,7 @@ object Boot extends App {
         implicit val context = ReferenceContext(typeBuffer, verificationBuffer)
         ASTValidation.validate(ast) match {
           case Valid =>
-            val result = ScalaGenerator.generate(ast)
+            val result = ScalaASTBuilder.build(ast)
             Files.createDirectories(destination.getParent)
             Files.write(destination, Seq(result).asJava, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
           case Invalid(errors) =>
