@@ -47,7 +47,7 @@ object ScalaGenerator {
 
   private def appendNative(buffer: StringBuilder)(implicit context: Context): Unit = {
     Seq("BooleanWrapper", "DateWrapper", "ListWrapper", "NumberWrapper", "StringWrapper") foreach { className =>
-      buffer.append(Source.fromResource(s"generators/scala/native/$className.scala").getLines.mkString("", "\n", "\n"))
+      buffer.append(Source.fromResource(s"native/$className.scala").getLines.mkString("", "\n", "\n"))
     }
   }
 
