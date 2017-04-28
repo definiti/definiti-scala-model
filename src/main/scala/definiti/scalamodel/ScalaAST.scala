@@ -22,7 +22,7 @@ object ScalaAST {
 
   case class CallAttribute(target: Expression, name: String) extends Expression with Unambiguous
   case class CallMethod(target: Expression, name: String, arguments: Seq[Expression]) extends Expression with Unambiguous
-  case class CallFunction2(name: String, arguments1: Seq[Expression], arguments2: Seq[Expression]) extends Expression with Unambiguous
+  case class CallFunction(target: Expression, arguments: Seq[Expression]) extends Expression with Unambiguous
 
   case class Block(body: Seq[Statement]) extends Expression
 

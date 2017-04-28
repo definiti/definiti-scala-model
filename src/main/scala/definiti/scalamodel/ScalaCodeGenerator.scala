@@ -1,5 +1,7 @@
 package definiti.scalamodel
 
+import definiti.scalamodel.ScalaAST.Expression
+
 object ScalaCodeGenerator {
 
   def apply(ast: ScalaAST.Expression): String = generateExpression(ast)
@@ -9,6 +11,12 @@ object ScalaCodeGenerator {
     case _ => s"(${generateExpression(ast)})"
   }
 
+  def inBlock(ast: ScalaAST.Expression): String = inBlock(Seq(ast))
+  def inBlock(ast: Seq[ScalaAST.Expression]): String = ast match {
+    case (el: ScalaAST.Block) +: Seq() => generateExpression(el)
+    case _ => generateExpression(ScalaAST.Block(ast))
+  }
+
   val generateExpression: ScalaAST.Expression => String = {
     case ast: ScalaAST.SimpleExpression => generateSimpleExpression(ast)
     case ast: ScalaAST.BinaryOp => generateBinaryOp(ast)
@@ -16,7 +24,7 @@ object ScalaCodeGenerator {
     case ast: ScalaAST.Lambda => generateLambda(ast)
     case ast: ScalaAST.CallAttribute => generateCallAttribute(ast)
     case ast: ScalaAST.CallMethod => generateCallMethod(ast)
-    case ast: ScalaAST.CallFunction2 => generateCallFunction2(ast)
+    case ast: ScalaAST.CallFunction => generateCallFunction(ast)
     case ast: ScalaAST.Block => generateBlock(ast)
     case ast: ScalaAST.If => generateIf(ast)
   }
@@ -36,14 +44,11 @@ object ScalaCodeGenerator {
   }
 
   def generateIfThen(ast: ScalaAST.IfThen): String =
-    s"if (${generateExpression(ast.cond)}) ${generateExpression(ast.ifTrue)}"
+    s"if (${generateExpression(ast.cond)}) ${inBlock(ast.ifTrue)}"
 
   def generateIfThenElse(ast: ScalaAST.IfThenElse): String =
-    s"""if (${generateExpression(ast.cond)}) {
-       |  ${generateExpression(ast.ifTrue)}
-       |} else {
-       |  ${generateExpression(ast.ifTrue)}
-       |}""".stripMargin
+    s"""if (${generateExpression(ast.cond)}) ${inBlock(ast.ifTrue)}
+       |else ${inBlock(ast.ifTrue)}""".stripMargin
 
   def generateParameter(ast: ScalaAST.Parameter): String =
     s"${ast.name}: ${ast.typ}"
@@ -54,14 +59,21 @@ object ScalaCodeGenerator {
   def generateCallAttribute(ast: ScalaAST.CallAttribute): String =
     s"${withParens(ast.target)}.${ast.name}"
 
-  def generateCallMethod(ast: ScalaAST.CallMethod): String =
-    s"${withParens(ast.target)}.${ast.name}(${ast.arguments.map(generateExpression).mkString(", ")})"
+  def inParensOrBlock(ast: Seq[Expression]): String = ast match {
+    case (el: ScalaAST.Block) +: Seq() => generateExpression(el)
+    case _ => s"""(${ast.map(generateExpression).mkString(", ")})"""
+  }
 
-  def generateCallFunction2(ast: ScalaAST.CallFunction2): String =
-    s"${ast.name}(${ast.arguments1.map(generateExpression).mkString(", ")})(${ast.arguments2.map(generateExpression).mkString(", ")})"
+  def generateCallMethod(ast: ScalaAST.CallMethod): String =
+    s"${withParens(ast.target)}.${ast.name}${inParensOrBlock(ast.arguments)}"
+
+  def generateCallFunction(ast: ScalaAST.CallFunction): String =
+    s"${generateExpression(ast.target)}${inParensOrBlock(ast.arguments)}"
 
   def generateBlock(ast: ScalaAST.Block): String = {
-    s"{\n${ast.body.map(generateStatement).mkString("\n")}\n}"
+    s"""{
+       |  ${ast.body.map(generateStatement).mkString("\n  ")}
+       |}""".stripMargin
   }
 
   def generateComment(ast: ScalaAST.Comment): String = {
@@ -74,9 +86,7 @@ object ScalaCodeGenerator {
   }
 
   def generateDef(ast: ScalaAST.Def): String =
-    s"""def ${ast.name}(${ast.parameters.map(generateParameter).mkString(", ")}): ${ast.typ} = {
-       |  ${generateExpression(ast.body)}
-       |}""".stripMargin
+    s"def ${ast.name}(${ast.parameters.map(generateParameter).mkString(", ")}): ${ast.typ} = ${inBlock(ast.body)}"
 
   val generateStatement: ScalaAST.Statement => String = {
     case ast: ScalaAST.Expression => generateExpression(ast)

@@ -49,9 +49,11 @@ object ScalaASTBuilder {
     //     ${verification.function.body}
     //   }
     // }
-    val body = ScalaAST.CallFunction2(
-      "verify",
-      Seq(ScalaAST.SimpleExpression(s""""${verification.message}"""")),
+    val body = ScalaAST.CallFunction(
+      ScalaAST.CallFunction(
+        ScalaAST.SimpleExpression("verify"),
+        Seq(ScalaAST.SimpleExpression(s""""${verification.message}""""))
+      ),
       Seq(ScalaAST.Block(Seq(generateExpression(verification.function.body))))
     )
     val func = ScalaAST.Def(
