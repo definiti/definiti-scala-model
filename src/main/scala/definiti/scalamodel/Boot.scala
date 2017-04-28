@@ -3,10 +3,9 @@ package definiti.scalamodel
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Paths, StandardOpenOption}
 
-import definiti.api.ReferenceContext
-import definiti.parser._
-import definiti.parser.antlr.{CoreDefinitionLexer, CoreDefinitionParser, DefinitiLexer, DefinitiParser}
-import definiti.{ClassDefinition, Root, Verification}
+import definiti.core.parser.antlr.{CoreDefinitionLexer, CoreDefinitionParser, DefinitiLexer, DefinitiParser}
+import definiti.core.parser._
+import definiti.core.{ClassDefinition, ReferenceContext, Root, Verification}
 import org.antlr.v4.runtime._
 
 import scala.collection.JavaConverters._

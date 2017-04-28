@@ -1,7 +1,6 @@
 package definiti.scalamodel
 
-import definiti.{scalamodel, _}
-import definiti.api.Context
+import definiti.core._
 
 import scala.io.Source
 
