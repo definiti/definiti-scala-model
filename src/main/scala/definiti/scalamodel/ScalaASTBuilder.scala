@@ -137,15 +137,15 @@ object ScalaASTBuilder {
     case And(left, right, _) => ScalaAST.BinaryOp("&&", generateExpression(left), generateExpression(right))
     case Equal(left, right, _) => ScalaAST.BinaryOp("==", generateExpression(left), generateExpression(right))
     case NotEqual(left, right, _) => ScalaAST.BinaryOp("!=", generateExpression(left), generateExpression(right))
-    case Lower(left, right, _) => ScalaAST.BinaryOp("< ", generateExpression(left), generateExpression(right))
-    case Upper(left, right, _) => ScalaAST.BinaryOp("> ", generateExpression(left), generateExpression(right))
+    case Lower(left, right, _) => ScalaAST.BinaryOp("<", generateExpression(left), generateExpression(right))
+    case Upper(left, right, _) => ScalaAST.BinaryOp(">", generateExpression(left), generateExpression(right))
     case LowerOrEqual(left, right, _) => ScalaAST.BinaryOp("<=", generateExpression(left), generateExpression(right))
     case UpperOrEqual(left, right, _) => ScalaAST.BinaryOp(">=", generateExpression(left), generateExpression(right))
-    case Plus(left, right, _) => ScalaAST.BinaryOp("+ ", generateExpression(left), generateExpression(right))
-    case Minus(left, right, _) => ScalaAST.BinaryOp("- ", generateExpression(left), generateExpression(right))
-    case Modulo(left, right, _) => ScalaAST.BinaryOp("% ", generateExpression(left), generateExpression(right))
-    case Time(left, right, _) => ScalaAST.BinaryOp("* ", generateExpression(left), generateExpression(right))
-    case Divide(left, right, _) => ScalaAST.BinaryOp("/ ", generateExpression(left), generateExpression(right))
+    case Plus(left, right, _) => ScalaAST.BinaryOp("+", generateExpression(left), generateExpression(right))
+    case Minus(left, right, _) => ScalaAST.BinaryOp("-", generateExpression(left), generateExpression(right))
+    case Modulo(left, right, _) => ScalaAST.BinaryOp("%", generateExpression(left), generateExpression(right))
+    case Time(left, right, _) => ScalaAST.BinaryOp("*", generateExpression(left), generateExpression(right))
+    case Divide(left, right, _) => ScalaAST.BinaryOp("/", generateExpression(left), generateExpression(right))
     case Not(inner, _) => ScalaAST.UnaryOp("!", generateExpression(inner))
     case LambdaExpression(parameterList, inner, _) =>
       ScalaAST.Lambda(parameterList.map(generateParameter), generateExpression(inner))
@@ -222,7 +222,7 @@ object ScalaASTBuilder {
                   ScalaAST.Match(
                     expr = ScalaAST.SimpleExpression("__errorOpt"),
                     cases = Seq(
-                      ScalaAST.Case(pattern = "Some(error)", body = ScalaAST.CallFunction(ScalaAST.SimpleExpression("Right"), Seq(
+                      ScalaAST.Case(pattern = "Some(error)", body = ScalaAST.CallFunction(ScalaAST.SimpleExpression("Left"), Seq(
                         ScalaAST.SimpleExpression("error")
                       ))),
                       ScalaAST.Case(pattern = "None", body = ScalaAST.CallFunction(ScalaAST.SimpleExpression("Right"), Seq(
