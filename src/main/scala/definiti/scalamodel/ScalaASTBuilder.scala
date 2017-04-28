@@ -64,16 +64,10 @@ object ScalaASTBuilder {
   }
 
   private def generateVerification(verification: Verification)(implicit context: Context): ScalaAST.Statement = {
-    // // comments
-    // def verify{name}({parameters}): Option[String] = {
-    //   verify("{message}") {
-    //     {body}
-    //   }
-    // }
     val body = ScalaAST.CallFunction(
       ScalaAST.CallFunction(
         ScalaAST.SimpleExpression("verify"),
-        Seq(ScalaAST.SimpleExpression(s""""${verification.message}""""))
+        Seq(ScalaAST.SimpleExpression('"' + verification.message + '"'))
       ),
       Seq(ScalaAST.Block(Seq(generateExpression(verification.function.body))))
     )
@@ -122,11 +116,11 @@ object ScalaASTBuilder {
 
   private def generateExpression(expression: Expression)(implicit context: Context): ScalaAST.Expression = expression match {
     case BooleanValue(value, _) =>
-      ScalaAST.SimpleExpression(s"new BooleanWrapper(${value.toString})")
+      ScalaAST.New("BooleanWrapper", Seq(ScalaAST.SimpleExpression(value.toString)))
     case NumberValue(value, _) =>
-      ScalaAST.SimpleExpression(s"new NumberWrapper(${value.toString})")
+      ScalaAST.New("NumberWrapper", Seq(ScalaAST.SimpleExpression(value.toString)))
     case QuotedStringValue(value, _) =>
-      ScalaAST.SimpleExpression(s"""new StringWrapper("${value.toString.replaceAllLiterally("\\", "\\\\")}")""")
+      ScalaAST.New("StringWrapper", Seq(ScalaAST.SimpleExpression('"' + value.replaceAllLiterally("\\", "\\\\") + '"')))
     case Variable(variable, _, _) =>
       ScalaAST.SimpleExpression(variable)
     case MethodCall(inner, method, parameters, _, _) =>
@@ -217,7 +211,10 @@ object ScalaASTBuilder {
                         }
                     ),
                     "find",
-                    Seq(ScalaAST.SimpleExpression("_.isDefined"))
+                    Seq(ScalaAST.CallAttribute(
+                      ScalaAST.SimpleExpression("_"),
+                      "isDefined"
+                    ))
                   ),
                   "flatten"
                 )),
@@ -225,7 +222,9 @@ object ScalaASTBuilder {
                   ScalaAST.Match(
                     expr = ScalaAST.SimpleExpression("__errorOpt"),
                     cases = Seq(
-                      ScalaAST.Case(pattern = "Some(error)", body = ScalaAST.SimpleExpression("Left(error)")),
+                      ScalaAST.Case(pattern = "Some(error)", body = ScalaAST.CallFunction(ScalaAST.SimpleExpression("Right"), Seq(
+                        ScalaAST.SimpleExpression("error")
+                      ))),
                       ScalaAST.Case(pattern = "None", body = ScalaAST.CallFunction(ScalaAST.SimpleExpression("Right"), Seq(
                         originalTypeOpt match {
                           case Some(_) =>
@@ -324,7 +323,7 @@ object ScalaASTBuilder {
     ScalaAST.CallFunction(
       ScalaAST.CallFunction(
         ScalaAST.SimpleExpression("verify"),
-        Seq(ScalaAST.SimpleExpression(s""""${typeVerification.message}""""))
+        Seq(ScalaAST.SimpleExpression('"' + typeVerification.message + '"'))
       ),
       Seq(generateExpression(typeVerification.function.body))
     )
