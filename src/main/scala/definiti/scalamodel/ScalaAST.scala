@@ -26,10 +26,15 @@ object ScalaAST {
 
   case class Block(body: Seq[Statement]) extends Expression
 
-  case class Comment(str: String)
+  case class Comment(str: String) extends Statement
 
-  case class CommentedStatement(comment: Comment, body: Statement) extends Statement
+  case class Def(name: String, typ: String, parameters: Seq[Parameter], body: Expression, property: Option[String]) extends Statement
+  case class Def2(name: String, typ: String, parameters1: Seq[Parameter], parameters2: Seq[Parameter], body: Expression, property: Option[String]) extends Statement
 
-  case class Def(name: String, typ: String, parameters: Seq[Parameter], body: Expression) extends Statement
+  case class Import(name: String) extends Statement
+
+  case class PackageDef(name: String, body: Seq[Statement]) extends Statement
+
+  case class StatementsGroup(statements: Seq[Statement]) extends Statement
 
 }

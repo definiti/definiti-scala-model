@@ -17,19 +17,38 @@ object ScalaASTBuilder {
   def build(root: Root)(implicit context: Context): String = {
     val buffer: StringBuilder = new StringBuilder()
 
+    buffer.append(
+      """/* ***************************************************************** *
+        | * Native
+        | * ***************************************************************** */
+        |""".stripMargin)
+
     appendNative(buffer)
 
-    buffer.append(
-      s"""
-         |package object verifications {
-         |  ${root.verifications.map(generateVerification).map(ScalaCodeGenerator.generateStatement).mkString("\n\n")}
-         |
-         |  private def verify(message: String)(condition: => Boolean) =
-         |    if (condition) None else Some(message)
-         |}
-         |import verifications._
-      """.stripMargin
-    )
+    buffer.append(ScalaCodeGenerator(ScalaAST.StatementsGroup(Seq(
+      ScalaAST.Comment("""***************************************************************** *
+                         | * Verification definitions
+                         | * *****************************************************************""".stripMargin),
+      ScalaAST.PackageDef(
+        "object verifications",
+        root.verifications.map(generateVerification) :+ ScalaAST.Def2(
+          name = "verify",
+          typ = "Option[String]",
+          parameters1 = Seq(ScalaAST.Parameter("message", "String")),
+          parameters2 = Seq(ScalaAST.Parameter("condition", "=> Boolean")),
+          body = ScalaAST.IfThenElse(
+            ScalaAST.SimpleExpression("condition"),
+            ScalaAST.SimpleExpression("None"),
+            ScalaAST.SimpleExpression("Some(message)")
+          ),
+          property = Some("private")
+        )
+      ),
+      ScalaAST.Import("verifications._"),
+      ScalaAST.Comment("""***************************************************************** *
+                         | * Class definitions
+                         | * *****************************************************************""".stripMargin)
+    ))))
 
     buffer.append(root.classDefinitions.map(generateClassDefinition).mkString("\n\n"))
 
@@ -60,10 +79,11 @@ object ScalaASTBuilder {
       s"verify${verification.name}",
       "Option[String]",
       verification.function.parameters.map(generateParameter),
-      body
+      body,
+      property = None
     )
     verification.comment match {
-      case Some(comment) => ScalaAST.CommentedStatement(ScalaAST.Comment(comment), func)
+      case Some(comment) => ScalaAST.StatementsGroup(Seq(ScalaAST.Comment(comment.trim), func))
       case None => func
     }
   }
