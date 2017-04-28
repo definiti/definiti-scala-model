@@ -1,6 +1,6 @@
 package definiti.scalamodel
 
-import definiti._
+import definiti.{scalamodel, _}
 import definiti.api.Context
 
 import scala.io.Source
@@ -15,43 +15,30 @@ object ScalaASTBuilder {
   )
 
   def build(root: Root)(implicit context: Context): String = {
-    val buffer: StringBuilder = new StringBuilder()
+    val generatedCode = ScalaAST.StatementsGroup(
+      Seq(
+        ScalaAST.Comment("""***************************************************************** *
+                           | * Verification definitions
+                           | * *****************************************************************""".stripMargin),
+        ScalaAST.PackageDef(
+          "object verifications",
+          root.verifications.map(generateVerification) :+ generateGenericVerifyFunction()
+        ),
+        ScalaAST.Import("verifications._"),
+        ScalaAST.Comment("""***************************************************************** *
+                           | * Class definitions
+                           | * *****************************************************************""".stripMargin)
+      ) ++ root.classDefinitions.map(generateClassDefinition)
+    )
 
+    val buffer: StringBuilder = new StringBuilder()
     buffer.append(
       """/* ***************************************************************** *
         | * Native
         | * ***************************************************************** */
         |""".stripMargin)
-
     appendNative(buffer)
-
-    buffer.append(ScalaCodeGenerator(ScalaAST.StatementsGroup(Seq(
-      ScalaAST.Comment("""***************************************************************** *
-                         | * Verification definitions
-                         | * *****************************************************************""".stripMargin),
-      ScalaAST.PackageDef(
-        "object verifications",
-        root.verifications.map(generateVerification) :+ ScalaAST.Def2(
-          name = "verify",
-          typ = "Option[String]",
-          parameters1 = Seq(ScalaAST.Parameter("message", "String")),
-          parameters2 = Seq(ScalaAST.Parameter("condition", "=> Boolean")),
-          body = ScalaAST.IfThenElse(
-            ScalaAST.SimpleExpression("condition"),
-            ScalaAST.SimpleExpression("None"),
-            ScalaAST.SimpleExpression("Some(message)")
-          ),
-          property = Some("private")
-        )
-      ),
-      ScalaAST.Import("verifications._"),
-      ScalaAST.Comment("""***************************************************************** *
-                         | * Class definitions
-                         | * *****************************************************************""".stripMargin)
-    ))))
-
-    buffer.append(root.classDefinitions.map(generateClassDefinition).mkString("\n\n"))
-
+    buffer.append(ScalaCodeGenerator(generatedCode))
     buffer.toString()
   }
 
@@ -61,11 +48,26 @@ object ScalaASTBuilder {
     }
   }
 
+  private def generateGenericVerifyFunction(): ScalaAST.Def2 = {
+    ScalaAST.Def2(
+      name = "verify",
+      typ = "Option[String]",
+      parameters1 = Seq(ScalaAST.Parameter("message", "String", property = None)),
+      parameters2 = Seq(ScalaAST.Parameter("condition", "=> Boolean", property = None)),
+      body = Some(ScalaAST.IfThenElse(
+        ScalaAST.SimpleExpression("condition"),
+        ScalaAST.SimpleExpression("None"),
+        ScalaAST.SimpleExpression("Some(message)")
+      )),
+      property = Some("private")
+    )
+  }
+
   private def generateVerification(verification: Verification)(implicit context: Context): ScalaAST.Statement = {
     // // comments
-    // def verify${name}(${verification.function.parameters}): Option[String] = {
-    //   verify("${verification.message}") {
-    //     ${verification.function.body}
+    // def verify{name}({parameters}): Option[String] = {
+    //   verify("{message}") {
+    //     {body}
     //   }
     // }
     val body = ScalaAST.CallFunction(
@@ -75,11 +77,11 @@ object ScalaASTBuilder {
       ),
       Seq(ScalaAST.Block(Seq(generateExpression(verification.function.body))))
     )
-    val func = ScalaAST.Def(
-      s"verify${verification.name}",
-      "Option[String]",
-      verification.function.parameters.map(generateParameter),
-      body,
+    val func = ScalaAST.Def1(
+      name = s"verify${verification.name}",
+      typ = "Option[String]",
+      parameters = verification.function.parameters.map(generateParameter),
+      body = Some(body),
       property = None
     )
     verification.comment match {
@@ -96,7 +98,7 @@ object ScalaASTBuilder {
   private def generateParameter(parameterDefinition: ParameterDefinition)(implicit context: Context): ScalaAST.Parameter = {
     val parameterName = parameterDefinition.name
     val parameterType = generateParameterType(parameterDefinition.typeReference)
-    ScalaAST.Parameter(parameterName, parameterType)
+    ScalaAST.Parameter(parameterName, parameterType, property = None)
   }
 
   private def generateParameterType(typeReference: AbstractTypeReference)(implicit context: Context): String = {
@@ -155,79 +157,115 @@ object ScalaASTBuilder {
       ScalaAST.Lambda(parameterList.map(generateParameter), generateExpression(inner))
   }
 
-  private def generateClassDefinition(classDefinition: ClassDefinition)(implicit context: Context): String = classDefinition match {
+  private def generateClassDefinition(classDefinition: ClassDefinition)(implicit context: Context): ScalaAST.Statement = classDefinition match {
     case definedType: DefinedType => generateDefinedType(definedType)
     case aliasType: AliasType => generateAliasType(aliasType)
   }
 
-  private def generateDefinedType(definedType: DefinedType, originalTypeOpt: Option[TypeReference] = None)(implicit context: Context): String = {
-    val __resultAliases = definedType.verifications
-      .flatMap(_.function.parameters.map(_.name))
-      .distinct
-      .map(parameter => s"val $parameter = __result")
-      .mkString("\n")
-
-    val verifications = (
-      definedType.verifications.map(generateTypeVerification)
-        ++
-        definedType.inherited.map(inherited => s"verify$inherited(__result)")
-      ).mkString(", ")
-
+  private def generateDefinedType(definedType: DefinedType, originalTypeOpt: Option[TypeReference] = None)(implicit context: Context): ScalaAST.Statement = {
+    val typeDefinition = s"${generateGenericTypeDefinition(definedType)}"
     val realType = originalTypeOpt.map(_.typeName).getOrElse(definedType.name)
-
-    val resultType = originalTypeOpt match {
-      case Some(_) =>
-        s"new ${definedType.name}(${definedType.attributes.map(attribute => s"__result.${attribute.name}").mkString(", ")})"
-      case None =>
-        "__result"
-    }
-
-    val $interface = originalTypeOpt.map(_ => "").getOrElse(generateInterface(definedType))
-
     val originalTypeGenerics = originalTypeOpt match {
       case Some(originalType) => generateGenericTypes(originalType.genericTypes)
       case None => generateGenericTypeDefinition(definedType)
     }
-
-    val typeDefinition = s"${generateGenericTypeDefinition(definedType)}"
-    s"""
-       |${$interface}
-       |${definedType.comment.map(comment => s"/*$comment*/").getOrElse("")}
-       |class ${definedType.name}$typeDefinition private(${generateAttributes(definedType.attributes)}) extends $$$realType$originalTypeGenerics
-       |
-       |object ${definedType.name} {
-       |  def apply$typeDefinition(${generateAttributeParameters(definedType.attributes)}): Either[String, ${definedType.name}$typeDefinition] = {
-       |    val __result = new ${definedType.name}(${definedType.attributes.map(_.name).mkString(", ")})
-       |    ${__resultAliases}
-       |    val __errorOpt = Seq(
-       |      $verifications
-       |    ).find(_.isDefined).flatten
-       |
-       |    __errorOpt match {
-       |      case Some(error) => Left(error)
-       |      case None =>
-       |
-       |      Right($resultType)
-       |    }
-       |  }
-       |
-       |  private def verify(message: String)(condition: => Boolean) = {
-       |    if (condition) {
-       |      None
-       |    } else {
-       |      Some(message)
-       |    }
-       |  }
-       |}
-     """.stripMargin
+    ScalaAST.StatementsGroup(
+      Seq(
+        originalTypeOpt match {
+          case Some(_) => None
+          case None => Some(generateTrait(definedType))
+        },
+        definedType.comment.map(ScalaAST.Comment),
+        Some(ScalaAST.ClassDef(
+          name = s"${definedType.name}$typeDefinition",
+          extendz = Some(s"$$$realType$originalTypeGenerics"),
+          parameters = generateAttributes(definedType.attributes),
+          body = Nil,
+          property = None,
+          privateConstructor = true
+        )),
+        Some(ScalaAST.ObjectDef(
+          name = definedType.name,
+          body = Seq(
+            ScalaAST.Def1(
+              name = s"apply$typeDefinition",
+              typ = s"Either[String, ${definedType.name}$typeDefinition]",
+              parameters = definedType.attributes.map(generateAttributeParameter),
+              body = Some(ScalaAST.Block(Seq(
+                ScalaAST.Val(
+                  name = "__result",
+                  value = ScalaAST.New(
+                    name = definedType.name,
+                    arguments = definedType.attributes.map { attribute =>
+                      ScalaAST.SimpleExpression(attribute.name)
+                    }
+                  )
+                ),
+                ScalaAST.StatementsGroup(
+                  definedType.verifications
+                    .flatMap(_.function.parameters.map(_.name))
+                    .distinct
+                    .map(parameter => ScalaAST.Val(parameter, ScalaAST.SimpleExpression("__result")))
+                ),
+                ScalaAST.Val("__errorOpt", ScalaAST.CallAttribute(
+                  ScalaAST.CallMethod(
+                    ScalaAST.CallFunction(
+                      ScalaAST.SimpleExpression("Seq"),
+                      definedType.verifications.map(generateTypeVerification) ++
+                        definedType.inherited.map { inherited =>
+                          ScalaAST.CallFunction(ScalaAST.SimpleExpression(s"verify$inherited"), Seq(ScalaAST.SimpleExpression("__result")))
+                        }
+                    ),
+                    "find",
+                    Seq(ScalaAST.SimpleExpression("_.isDefined"))
+                  ),
+                  "flatten"
+                )),
+                {
+                  ScalaAST.Match(
+                    expr = ScalaAST.SimpleExpression("__errorOpt"),
+                    cases = Seq(
+                      ScalaAST.Case(pattern = "Some(error)", body = ScalaAST.SimpleExpression("Left(error)")),
+                      ScalaAST.Case(pattern = "None", body = ScalaAST.CallFunction(ScalaAST.SimpleExpression("Right"), Seq(
+                        originalTypeOpt match {
+                          case Some(_) =>
+                            ScalaAST.New(definedType.name, definedType.attributes.map { attribute =>
+                              ScalaAST.CallAttribute(ScalaAST.SimpleExpression("__result"), attribute.name)
+                            })
+                          case None => ScalaAST.SimpleExpression("__result")
+                        }
+                      )))
+                    )
+                  )
+                }
+              ))),
+              property = None
+            ),
+            generateGenericVerifyFunction()
+          )
+        ))
+      ).flatten
+    )
   }
 
-  private def generateInterface(definedType: DefinedType)(implicit context: Context): String = {
-    s"""
-       |trait $$${definedType.name}${generateGenericTypeDefinition(definedType)} {
-       |  ${definedType.attributes.map(attribute => "def " + generateAttributeParameter(attribute)).mkString("\n")}
-       |}
-     """.stripMargin
+  private def generateTrait(definedType: DefinedType)(implicit context: Context): ScalaAST.TraitDef = {
+    //
+    // trait $${definedType}${generateGenericTypeDefinition(definedType)} {
+    //   ${definedType.attributes.map(attribute => "def " + generateAttributeParameter_(attribute)).mkString("\n")}
+    // }
+    ScalaAST.TraitDef(
+      s"$$${definedType.name}${generateGenericTypeDefinition(definedType)}",
+      definedType.attributes.map { attribute =>
+        val attributeType = nativeTypeMapping.getOrElse(attribute.typeReference.typeName, attribute.typeReference.typeName)
+        val attributeGenerics = generateGenericTypes(attribute.typeReference.genericTypes)
+        ScalaAST.Def0(
+          name = attribute.name,
+          typ = s"$attributeType$attributeGenerics",
+          body = None,
+          property = None
+        )
+      }
+    )
   }
 
   private def generateGenericTypeDefinition(definedType: DefinedType) = {
@@ -238,7 +276,7 @@ object ScalaASTBuilder {
     }
   }
 
-  private def generateAliasType(aliasType: AliasType)(implicit context: Context): String = {
+  private def generateAliasType(aliasType: AliasType)(implicit context: Context): ScalaAST.Statement = {
     context.findType(aliasType.alias.typeName) match {
       case Some(definedType: DefinedType) =>
         val genericTypeMapping = Map(definedType.genericTypes.zip(aliasType.alias.genericTypes): _*)
@@ -264,31 +302,32 @@ object ScalaASTBuilder {
     }
   }
 
-  private def generateAttributes(attributeDefinition: Seq[AttributeDefinition])(implicit context: Context): String = {
-    attributeDefinition.map(generateAttribute).mkString(", ")
+
+  private def generateAttributes(attributeDefinition: Seq[AttributeDefinition])(implicit context: Context): Seq[ScalaAST.Parameter] = {
+    attributeDefinition.map(generateAttribute)
   }
 
-  private def generateAttribute(attributeDefinition: AttributeDefinition)(implicit context: Context): String = {
-    s"val ${generateAttributeParameter(attributeDefinition)}"
+  private def generateAttribute(attributeDefinition: AttributeDefinition)(implicit context: Context): ScalaAST.Parameter = {
+    generateAttributeParameter(attributeDefinition).copy(property = Some("val"))
   }
 
-  private def generateAttributeParameters(attributeDefinition: Seq[AttributeDefinition])(implicit context: Context): String = {
-    attributeDefinition.map(generateAttributeParameter).mkString(", ")
-  }
-
-  private def generateAttributeParameter(attributeDefinition: AttributeDefinition)(implicit context: Context): String = {
-    val attributeName = attributeDefinition.name
+  private def generateAttributeParameter(attributeDefinition: AttributeDefinition)(implicit context: Context): ScalaAST.Parameter = {
     val attributeType = nativeTypeMapping.getOrElse(attributeDefinition.typeReference.typeName, attributeDefinition.typeReference.typeName)
     val attributeGenerics = generateGenericTypes(attributeDefinition.typeReference.genericTypes)
-    s"$attributeName: $attributeType$attributeGenerics"
+    ScalaAST.Parameter(attributeDefinition.name, s"$attributeType$attributeGenerics", property = None)
   }
 
-  private def generateTypeVerification(typeVerification: TypeVerification)(implicit context: Context): String = {
-    s"""
-       |verify("${typeVerification.message}") {
-       |  ${generateExpression(typeVerification.function.body)}
-       |}
-     """.stripMargin
+  private def generateTypeVerification(typeVerification: TypeVerification)(implicit context: Context): ScalaAST.CallFunction = {
+    // verify("{message}") {
+    //   {body}
+    // }
+    ScalaAST.CallFunction(
+      ScalaAST.CallFunction(
+        ScalaAST.SimpleExpression("verify"),
+        Seq(ScalaAST.SimpleExpression(s""""${typeVerification.message}""""))
+      ),
+      Seq(generateExpression(typeVerification.function.body))
+    )
   }
 
   private def generateGenericTypes(genericTypes: Seq[TypeReference]): String = {

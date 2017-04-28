@@ -40,6 +40,7 @@ object ScalaCodeGenerator {
       case ast: ScalaAST.CallFunction => generateCallFunction(ast, indent)
       case ast: ScalaAST.Block => generateBlock(ast, indent)
       case ast: ScalaAST.If => generateIf(ast, indent)
+      case ast: ScalaAST.New => generateNew(ast, indent)
     }
   }
 
@@ -67,7 +68,7 @@ object ScalaCodeGenerator {
        |${indent}else ${maybeInBlock(ast.ifFalse, indent)}""".stripMargin
 
   def generateParameter(ast: ScalaAST.Parameter): String =
-    s"${ast.name}: ${ast.typ}"
+    s"${ast.property.map(p => s"$p ").getOrElse("")}${ast.name}: ${ast.typ}"
 
   def generateLambda(ast: ScalaAST.Lambda, indent: String): String =
     s"(${ast.parameters.map(generateParameter).mkString(", ")}) => ${generateExpression(ast.body, indent)}"
@@ -83,18 +84,24 @@ object ScalaCodeGenerator {
 
   def generateBlock(ast: ScalaAST.Block, indent: String): String =
     s"""{
-       |$indent  ${ast.body.map(a => generateStatement(a, inc(indent))).mkString("\n")}
+       |${inc(indent)}${ast.body.map(a => generateStatement(a, inc(indent))).mkString(s"\n${inc(indent)}")}
        |$indent}""".stripMargin
+
+  def generateNew(ast: ScalaAST.New, indent: String): String =
+    s"new ${ast.name}(${ast.arguments.map(a => generateExpression(a, indent)).mkString(", ")})"
 
   def generateComment(ast: ScalaAST.Comment, indent: String): String =
     if ((indent.length + ast.str.length < 120) && !ast.str.contains("\n")) s"// ${ast.str}"
     else s"/* ${ast.str.replace("\n", s"\n$indent")} */"
 
-  def generateDef(ast: ScalaAST.Def, indent: String): String =
-    s"${ast.property.map(p => s"$p ").getOrElse("")}def ${ast.name}(${ast.parameters.map(generateParameter).mkString(", ")}): ${ast.typ} = ${maybeInBlock(ast.body, indent)}"
+  def generateDef0(ast: ScalaAST.Def0, indent: String): String =
+    s"""${ast.property.map(p => s"$p ").getOrElse("")}def ${ast.name}: ${ast.typ}${ast.body.map(a => " = " + maybeInBlock(a, indent)).getOrElse("")}"""
+
+  def generateDef1(ast: ScalaAST.Def1, indent: String): String =
+    s"""${ast.property.map(p => s"$p ").getOrElse("")}def ${ast.name}(${ast.parameters.map(generateParameter).mkString(", ")}): ${ast.typ}${ast.body.map(a => " = " + maybeInBlock(a, indent)).getOrElse("")}"""
 
   def generateDef2(ast: ScalaAST.Def2, indent: String): String =
-    s"${ast.property.map(p => s"$p ").getOrElse("")}def ${ast.name}(${ast.parameters1.map(generateParameter).mkString(", ")})(${ast.parameters2.map(generateParameter).mkString(", ")}): ${ast.typ} = ${maybeInBlock(ast.body, indent)}"
+    s"""${ast.property.map(p => s"$p ").getOrElse("")}def ${ast.name}(${ast.parameters1.map(generateParameter).mkString(", ")})(${ast.parameters2.map(generateParameter).mkString(", ")}): ${ast.typ}${ast.body.map(a => " = " + maybeInBlock(a, indent)).getOrElse("")}"""
 
   def generateImport(ast: ScalaAST.Import): String =
     s"import ${ast.name}"
@@ -107,15 +114,46 @@ object ScalaCodeGenerator {
   def generateStatementsGroup(ast: ScalaAST.StatementsGroup, indent: String): String =
     ast.statements.map(a => generateStatement(a, indent)).mkString(s"\n$indent")
 
+  def generateVal(ast: ScalaAST.Val, indent: String): String =
+    s"val ${ast.name} = ${generateExpression(ast.value, indent)}"
+
+  def generateTraitDef(ast: ScalaAST.TraitDef, indent: String): String =
+    s"""trait ${ast.name} {
+       |${inc(indent)}${ast.body.map(a => generateStatement(a, inc(indent))).mkString(s"\n${inc(indent)}")}
+       |$indent}""".stripMargin
+
+  def generateClassDef(ast: ScalaAST.ClassDef, indent: String): String = {
+    s"""${ast.property.map(p => s"$p ").getOrElse("")}class ${ast.name}${if (ast.privateConstructor) " private" else ""}(${ast.parameters.map(generateParameter).mkString(", ")})${ast.extendz.map(e => s" extends $e").getOrElse("")}${if (ast.body.isEmpty) "" else " " + generateStatement(ScalaAST.Block(ast.body), indent)}"""
+  }
+
+  def generateCase(ast: ScalaAST.Case, indent: String): String =
+    s"case ${ast.pattern} => ${generateStatement(ast.body, indent)}"
+
+  def generateMatch(ast: ScalaAST.Match, indent: String): String =
+    s"""${generateExpression(ast.expr, indent)} match {
+       |${inc(indent)}${ast.cases.map(a => generateCase(a, inc(indent))).mkString(s"\n${inc(indent)}")}
+       |$indent}""".stripMargin
+
+  def generateObjectDef(ast: ScalaAST.ObjectDef, indent: String): String =
+    s"""object ${ast.name} {
+       |${inc(indent)}${ast.body.map(a => generateStatement(a, inc(indent))).mkString(s"\n${inc(indent)}")}
+       |$indent}""".stripMargin
+
   def generateStatement(ast: ScalaAST.Statement, indent: String): String = {
     ast match {
       case ast: ScalaAST.Expression => generateExpression(ast, indent)
       case ast: ScalaAST.Comment => generateComment(ast, indent)
-      case ast: ScalaAST.Def => generateDef(ast, indent)
+      case ast: ScalaAST.Def0 => generateDef0(ast, indent)
+      case ast: ScalaAST.Def1 => generateDef1(ast, indent)
       case ast: ScalaAST.Def2 => generateDef2(ast, indent)
       case ast: ScalaAST.Import => generateImport(ast)
       case ast: ScalaAST.PackageDef => generatePackageDef(ast, indent)
       case ast: ScalaAST.StatementsGroup => generateStatementsGroup(ast, indent)
+      case ast: ScalaAST.Val => generateVal(ast, indent)
+      case ast: ScalaAST.TraitDef => generateTraitDef(ast, indent)
+      case ast: ScalaAST.ClassDef => generateClassDef(ast, indent)
+      case ast: ScalaAST.Match => generateMatch(ast, indent)
+      case ast: ScalaAST.ObjectDef => generateObjectDef(ast, indent)
     }
   }
 
