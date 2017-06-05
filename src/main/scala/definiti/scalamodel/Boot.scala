@@ -1,37 +1,55 @@
 package definiti.scalamodel
 
-import java.nio.charset.StandardCharsets
-import java.nio.file.{Files, Paths, StandardOpenOption}
+import java.nio.file.{Path, Paths}
 
 import definiti.core._
 
-import scala.collection.JavaConverters._
-
-object Boot extends App {
-  try {
-    val configuration = Configuration(
-      source = Paths.get("src", "main", "resources", "samples", "first.def"),
-      core = CoreConfiguration(
-        source = Paths.get("src", "main", "resources", "api")
+object Boot {
+  def main(args: Array[String]): Unit = {
+    try {
+      val configuration = ScalaModelConfiguration(
+        core = Configuration(
+          source = getSource(args),
+          core = CoreConfiguration(
+            source = getCoreSource(args)
+          )
+        ),
+        destination = getDestination(args)
       )
-    )
-    val destination = Paths.get("target", "samples", "result.scala")
 
-    val project = new Project(configuration)
-    project.load() match {
-      case Left(errors) =>
-        errors.foreach(System.err.println)
-      case Right(projectResult) =>
-        val root = projectResult.root
-        implicit val contexte = projectResult.context
-        val result = ScalaASTBuilder.build(root)
-        Files.createDirectories(destination.getParent)
-        Files.write(destination, Seq(result).asJava, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+      val project = new ScalaModelProject(configuration)
+      project.loadAndWrite() match {
+        case Left(errors) =>
+          errors.foreach(System.err.println)
+        case Right(_) =>
+          println("done")
+      }
+    } catch {
+      // In some cases, an Exception is thrown because the parser do not recognize an expression and crash its tree.
+      // Did not happened with a successful syntax yet.
+      case e: Exception =>
+        e.printStackTrace()
     }
-  } catch {
-    // In some cases, an Exception is thrown because the parser do not recognize an expression and crash its tree.
-    // Did not happened with a successful syntax yet.
-    case e: Exception =>
-      e.printStackTrace()
+  }
+
+  def getSource(args: Array[String]): Path = {
+    args.find(_.startsWith("source="))
+      .map(_.drop("source=".length))
+      .map(Paths.get(_))
+      .getOrElse(Paths.get("src", "main", "resources", "samples", "first.def"))
+  }
+
+  def getCoreSource(args: Array[String]): Path = {
+    args.find(_.startsWith("core="))
+      .map(_.drop("core=".length))
+      .map(Paths.get(_))
+      .getOrElse(Paths.get("src", "main", "resources", "api"))
+  }
+
+  def getDestination(args: Array[String]): Path = {
+    args.find(_.startsWith("destination="))
+      .map(_.drop("destination=".length))
+      .map(Paths.get(_))
+      .getOrElse(Paths.get("target", "samples"))
   }
 }
