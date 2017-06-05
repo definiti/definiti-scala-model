@@ -215,7 +215,27 @@ private[scalamodel] object ScalaASTBuilder {
   }
 
   private def generateDefinedTypeVerification(definedType: DefinedType)(implicit context: Context): ScalaAST.ClassVal = {
-    generateTypeVerifications(definedType, definedType.verifications.map(generateTypeVerification))
+    val typeVerifications = definedType.verifications.map(generateTypeVerification)
+    val attributeVerifications = definedType.attributes.flatMap { attribute =>
+      attribute.verifications.map { verification =>
+        val verificationWithMessage = verification.message match {
+          case Some(message) =>
+            ScalaAST.CallMethod(
+              target = ScalaAST.SimpleExpression(s"${verification.verificationName}Verification"),
+              name = "copy",
+              arguments = Seq(ScalaAST.SimpleExpression(s"message = $message"))
+            )
+          case None =>
+            ScalaAST.SimpleExpression(s"${verification.verificationName}Verification")
+        }
+        ScalaAST.CallMethod(
+          target = verificationWithMessage,
+          name = s"decorate[${definedType.name}]",
+          Seq(ScalaAST.SimpleExpression(s"_.${attribute.name}"))
+        )
+      }
+    }
+    generateTypeVerifications(definedType, typeVerifications ++ attributeVerifications)
   }
 
   private def generateNativeAliasType(aliasType: AliasType)(implicit context: Context): ScalaAST.ObjectDef = {
@@ -241,7 +261,7 @@ private[scalamodel] object ScalaASTBuilder {
     )
   }
 
-  private def generateTypeVerifications(aType: Type, additionalVerifications: Seq[ScalaAST.CallFunction])(implicit context: Context): ScalaAST.ClassVal = {
+  private def generateTypeVerifications(aType: Type, additionalVerifications: Seq[ScalaAST.Expression])(implicit context: Context): ScalaAST.ClassVal = {
     val inherited = aType match {
       case definedType: DefinedType => definedType.inherited
       case aliasType: AliasType => aliasType.inherited

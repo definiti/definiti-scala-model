@@ -46,6 +46,10 @@ case class Verification[-A](verification: A => Boolean, message: String) {
       Invalid(message)
     }
   }
+
+  def decorate[B](transformer: B => A): Verification[B] = {
+    Verification(transformer.andThen(verification), message)
+  }
 }
 
 object Verification {
