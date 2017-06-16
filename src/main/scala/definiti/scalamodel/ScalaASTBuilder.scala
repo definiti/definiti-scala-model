@@ -189,7 +189,7 @@ private[scalamodel] object ScalaASTBuilder {
       ))
   }
 
-  private def generateDefinedTypeApplyFunction(definedType: DefinedType) = {
+  private def generateDefinedTypeApplyFunction(definedType: DefinedType)(implicit context: Context) = {
     val typeDefinition = s"${generateGenericTypeDefinition(definedType)}"
     ScalaAST.Def1(
       name = s"apply$typeDefinition",
