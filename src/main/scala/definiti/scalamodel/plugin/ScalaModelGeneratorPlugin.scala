@@ -1,15 +1,12 @@
 package definiti.scalamodel.plugin
 
-import java.nio.charset.StandardCharsets
-import java.nio.file.{Path, Paths}
+import java.nio.file.Path
 
 import definiti.core._
 import definiti.scalamodel.model.PackageFile
-import definiti.scalamodel.utils.StringUtils
+import definiti.scalamodel.utils.{Resource, StringUtils}
 import definiti.scalamodel.{Configuration, ScalaAST, ScalaASTBuilder}
-import org.apache.commons.io.FileUtils
 
-import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
@@ -23,11 +20,10 @@ class ScalaModelGeneratorPlugin extends GeneratorPlugin {
   }
 
   def nativeSources: Map[Path, String] = {
-    val source = Paths.get("src", "main", "resources", "native")
+    val source = Resource("native")
     val destinationDirectory = config.destination.resolve("definiti").resolve("native")
-    FileUtils.listFiles(source.toFile, Seq("scala").toArray, false)
-      .asScala
-      .map(file => destinationDirectory.resolve(file.getName) -> FileUtils.readFileToString(file, StandardCharsets.UTF_8))
+    source.children
+      .map(file => destinationDirectory.resolve(file.name) -> file.content)
       .toMap
   }
 

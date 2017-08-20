@@ -11,6 +11,7 @@ libraryDependencies += "commons-io" % "commons-io" % "2.5"
 libraryDependencies += "com.typesafe" % "config" % "1.3.1"
 libraryDependencies += "com.typesafe.scala-logging" %% "scala-logging" % "3.5.0"
 libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.7.25"
+libraryDependencies += "com.github.pathikrit" %% "better-files" % "3.0.0"
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.1" % "test"
 
