@@ -95,32 +95,52 @@ object ScalaCodeGenerator {
     else s"/* ${ast.str.replace("\n", s"\n$indent")} */"
 
   def generateDef0(ast: ScalaAST.Def0, indent: String): String =
-    s"""${ast.property.map(p => s"$p ").getOrElse("")}def ${ast.name}: ${ast.typ}${ast.body.map(a => " = " + maybeInBlock(a, indent)).getOrElse("")}"""
+    s"""${ast.property.map(p => s"$p ").getOrElse("")}def ${ast.name}${generateGenerics(ast.generics)}: ${ast.typ}${ast.body.map(a => " = " + maybeInBlock(a, indent)).getOrElse("")}"""
 
   def generateDef1(ast: ScalaAST.Def1, indent: String): String =
-    s"""${ast.property.map(p => s"$p ").getOrElse("")}def ${ast.name}(${ast.parameters.map(generateParameter).mkString(", ")}): ${ast.typ}${ast.body.map(a => " = " + maybeInBlock(a, indent)).getOrElse("")}"""
+    s"""${ast.property.map(p => s"$p ").getOrElse("")}def ${ast.name}${generateGenerics(ast.generics)}(${ast.parameters.map(generateParameter).mkString(", ")}): ${ast.typ}${ast.body.map(a => " = " + maybeInBlock(a, indent)).getOrElse("")}"""
 
   def generateDef2(ast: ScalaAST.Def2, indent: String): String =
-    s"""${ast.property.map(p => s"$p ").getOrElse("")}def ${ast.name}(${ast.parameters1.map(generateParameter).mkString(", ")})(${ast.parameters2.map(generateParameter).mkString(", ")}): ${ast.typ}${ast.body.map(a => " = " + maybeInBlock(a, indent)).getOrElse("")}"""
+    s"""${ast.property.map(p => s"$p ").getOrElse("")}def ${ast.name}${generateGenerics(ast.generics)}(${ast.parameters1.map(generateParameter).mkString(", ")})(${ast.parameters2.map(generateParameter).mkString(", ")}): ${ast.typ}${ast.body.map(a => " = " + maybeInBlock(a, indent)).getOrElse("")}"""
+
+  private def generateGenerics(generics: Seq[String]): String = {
+    if (generics.nonEmpty) {
+      generics.mkString("[", ",", "]")
+    } else {
+      ""
+    }
+  }
+
+  def generatePackageDeclaration(ast: ScalaAST.PackageDeclaration): String =
+    s"package ${ast.name}"
 
   def generateImport(ast: ScalaAST.Import): String =
     s"import ${ast.name}"
 
   def generatePackageDef(ast: ScalaAST.PackageDef, indent: String): String =
-    s"""package ${ast.name} {
+    s"""package object ${ast.name} {
        |${inc(indent)}${ast.body.map(a => generateStatement(a, inc(indent))).mkString(s"\n${inc(indent)}")}
        |$indent}""".stripMargin
 
   def generateStatementsGroup(ast: ScalaAST.StatementsGroup, indent: String): String =
     ast.statements.map(a => generateStatement(a, indent)).mkString(s"\n$indent")
 
-  def generateVal(ast: ScalaAST.Val, indent: String): String =
-    s"val ${ast.name} = ${generateExpression(ast.value, indent)}"
+  def generateVal(ast: ScalaAST.Val, indent: String): String = {
+    val valType = if (ast.isLazy) "lazy val" else "val"
+    s"$valType ${ast.name} = ${generateExpression(ast.value, indent)}"
+  }
 
-  def generateTraitDef(ast: ScalaAST.TraitDef, indent: String): String =
-    s"""trait ${ast.name} {
-       |${inc(indent)}${ast.body.map(a => generateStatement(a, inc(indent))).mkString(s"\n${inc(indent)}")}
-       |$indent}""".stripMargin
+  def generateTraitDef(ast: ScalaAST.TraitDef, indent: String): String = {
+    val declaration = if (ast.isSealed) s"sealed trait ${ast.name}" else s"trait ${ast.name}"
+    val content = if (ast.body.nonEmpty) {
+      s"""{
+         |${inc(indent)}${ast.body.map(a => generateStatement(a, inc(indent))).mkString(s"\n${inc(indent)}")}
+         |$indent}""".stripMargin
+    } else {
+      ""
+    }
+    declaration + content
+  }
 
   def generateClassDef(ast: ScalaAST.ClassDef, indent: String): String = {
     s"""${ast.property.map(p => s"$p ").getOrElse("")}class ${ast.name}${if (ast.privateConstructor) " private" else ""}(${ast.parameters.map(generateParameter).mkString(", ")})${ast.extendz.map(e => s" extends $e").getOrElse("")}${if (ast.body.isEmpty) "" else " " + generateStatement(ScalaAST.Block(ast.body), indent)}"""
@@ -139,6 +159,18 @@ object ScalaCodeGenerator {
        |${inc(indent)}${ast.body.map(a => generateStatement(a, inc(indent))).mkString(s"\n${inc(indent)}")}
        |$indent}""".stripMargin
 
+  def generateClassVal(ast: ScalaAST.ClassVal, indent: String): String = {
+    val visibility = if (ast.isPrivate) "private" else ""
+    val lazyness = if (ast.isLazy) "lazy" else ""
+    val declaration = s"$visibility $lazyness val ${ast.name}: ${ast.typ}".trim
+    val assignation = ast.body.map(a => generateStatement(a, inc(indent))).mkString(s"\n${inc(indent)}")
+    s"$declaration = $assignation"
+  }
+
+  def generateTypeDef(ast: ScalaAST.TypeDef, indent: String): String = {
+    s"type ${ast.name} = ${ast.typ}"
+  }
+
   def generateStatement(ast: ScalaAST.Statement, indent: String): String = {
     ast match {
       case ast: ScalaAST.Expression => generateExpression(ast, indent)
@@ -146,6 +178,7 @@ object ScalaCodeGenerator {
       case ast: ScalaAST.Def0 => generateDef0(ast, indent)
       case ast: ScalaAST.Def1 => generateDef1(ast, indent)
       case ast: ScalaAST.Def2 => generateDef2(ast, indent)
+      case ast: ScalaAST.PackageDeclaration => generatePackageDeclaration(ast)
       case ast: ScalaAST.Import => generateImport(ast)
       case ast: ScalaAST.PackageDef => generatePackageDef(ast, indent)
       case ast: ScalaAST.StatementsGroup => generateStatementsGroup(ast, indent)
@@ -154,6 +187,8 @@ object ScalaCodeGenerator {
       case ast: ScalaAST.ClassDef => generateClassDef(ast, indent)
       case ast: ScalaAST.Match => generateMatch(ast, indent)
       case ast: ScalaAST.ObjectDef => generateObjectDef(ast, indent)
+      case ast: ScalaAST.ClassVal => generateClassVal(ast, indent)
+      case ast: ScalaAST.TypeDef => generateTypeDef(ast, indent)
     }
   }
 
