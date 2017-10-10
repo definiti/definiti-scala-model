@@ -39,7 +39,7 @@ object Verifications {
 }
 
 case class Verification[-A](verification: A => Boolean, message: String) {
-  def verify[B <: A](value: B): Validation[B] = {
+  def verify[B <: A](value: B, message: String = this.message): Validation[B] = {
     if (verification(value)) {
       Valid(value)
     } else {
@@ -47,7 +47,7 @@ case class Verification[-A](verification: A => Boolean, message: String) {
     }
   }
 
-  def decorate[B](transformer: B => A): Verification[B] = {
+  def decorate[B](transformer: B => A, message: String = this.message): Verification[B] = {
     Verification(transformer.andThen(verification), message)
   }
 }
