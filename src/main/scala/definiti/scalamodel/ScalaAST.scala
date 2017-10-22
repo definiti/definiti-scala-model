@@ -11,6 +11,7 @@ object ScalaAST {
   sealed trait Unambiguous // no parentheses required
 
   case class SimpleExpression(str: String) extends Expression with Unambiguous
+  case class StringExpression(string: String) extends Expression with Unambiguous
 
   case class BinaryOp(op: String, left: Expression, right: Expression) extends Expression
   case class UnaryOp(op: String, inner: Expression) extends Expression
@@ -19,7 +20,7 @@ object ScalaAST {
   case class IfThen(cond: Expression, ifTrue: Expression) extends If
   case class IfThenElse(cond: Expression, ifTrue: Expression, ifFalse: Expression) extends If
 
-  case class Parameter(name: String, typ: String, property: Option[String])
+  case class Parameter(name: String, typ: String, defaultValue: Option[Expression] = None, property: Option[String] = None)
   case class Lambda(parameters: Seq[Parameter], body: Expression) extends Expression
 
   case class CallAttribute(target: Expression, name: String) extends Expression with Unambiguous
@@ -114,6 +115,8 @@ object ScalaAST {
   case class Val(name: String, value: Expression, isLazy: Boolean = false) extends Statement
 
   case class TraitDef(name: String, body: Seq[Statement], isSealed: Boolean = false) extends Statement
+
+  case class CaseClassDef(name: String, extendz: Option[String], parameters: Seq[Parameter], body: Seq[Statement], property: Option[String]) extends Statement
 
   case class ClassDef(name: String, extendz: Option[String], parameters: Seq[Parameter], body: Seq[Statement], property: Option[String], privateConstructor: Boolean) extends Statement
 

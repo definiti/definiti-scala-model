@@ -7,43 +7,35 @@ trait VerificationBuilder {
   self: ScalaModelBuilder =>
 
   def generateVerification(verification: Verification): ScalaAST.Statement = {
-    ScalaAST.StatementsGroup(verification.comment.map(comment => ScalaAST.Comment(comment.trim)))
+    ScalaAST
+      .StatementsGroup(verification.comment.map(comment => ScalaAST.Comment(comment.trim)))
       .plus(generateVerificationObject(verification))
-      .plus(generateVerificationFunction(verification))
   }
 
-  private def generateVerificationObject(verification: Verification): ScalaAST.Val = {
-    ScalaAST.Val(
-      name = verificationObjectName(verification),
-      value = ScalaAST.CallFunction(
-        ScalaAST.CallFunction(
-          ScalaAST.SimpleExpression("Verification"),
-          Seq(ScalaAST.SimpleExpression('"' + verification.message + '"'))
-        ),
-        Seq(generateLambda(verification.function))
-      ),
-      isLazy = true
+  private def generateVerificationObject(verification: Verification): ScalaAST.Statement = {
+    ScalaAST.ObjectDef(
+      name = verification.name,
+      body = Seq(generateApply(verification))
     )
   }
 
-  private def verificationObjectName(verification: Verification): String = {
-    s"${verification.name}Verification"
-  }
-
-  private def generateVerificationFunction(verification: Verification): ScalaAST.Def1 = {
+  private def generateApply(verification: Verification): ScalaAST.Statement = {
     ScalaAST.Def1(
-      name = verificationFunctionName(verification),
-      typ = s"Validation[${generateParameterType(verification.function.parameters.head.typeReference)}]",
-      parameters = verification.function.parameters.map(generateParameter),
-      body = Some(ScalaAST.CallMethod(
-        target = ScalaAST.SimpleExpression(verificationObjectName(verification)),
-        name = "verify",
-        arguments = verification.function.parameters.map(parameter => ScalaAST.SimpleExpression(parameter.name))
-      ))
+      name = "apply",
+      typ = s"Verification[${generateParameterType(verification.function.parameters.head.typeReference)}]",
+      generics = Seq.empty,
+      parameters = Seq(ScalaAST.Parameter(name = "message", typ = "String", defaultValue = Some(ScalaAST.StringExpression(verification.message)))),
+      body = Some(generateMessageApplyBody(verification))
     )
   }
 
-  private def verificationFunctionName(verification: Verification): String = {
-    s"verify${verification.name}"
+  private def generateMessageApplyBody(verification: Verification): ScalaAST.Expression = {
+    ScalaAST.CallFunction(
+      ScalaAST.CallFunction(
+        ScalaAST.SimpleExpression("Verification"),
+        Seq(ScalaAST.SimpleExpression("message"))
+      ),
+      Seq(generateLambda(verification.function))
+    )
   }
 }

@@ -2,7 +2,6 @@ package definiti.scalamodel.builder
 
 import definiti.core.ast._
 import definiti.scalamodel.ScalaAST
-import definiti.scalamodel.utils.StringUtils
 
 trait TypeBuilder {
   self: ScalaModelBuilder =>
@@ -12,8 +11,8 @@ trait TypeBuilder {
       case TypeReference(typeName, genericTypes) =>
         val finalTypeName = library.types.get(typeName) match {
           case Some(_: NativeClassDefinition) => nativeTypeMapping.getOrElse(typeName, typeName)
-          case Some(_) => StringUtils.prefixOnLastPart(typeName, '.', "$")
-          case None => typeName
+          case Some(aliasType: AliasType) => generateParameterType(aliasType.alias)
+          case _ => typeName
         }
         val parameterGenerics = generateGenericTypes(genericTypes)
         finalTypeName + parameterGenerics

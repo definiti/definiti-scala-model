@@ -49,6 +49,6 @@ trait PackageBuilder {
 
   private def classDefinitionsStatement(namespace: Namespace): Seq[ScalaAST.Statement] = {
     classDefinitionsFromNamespace(namespace)
-      .flatMap(generateClassDefinition)
+      .map(generateClassDefinition)
   }
 }

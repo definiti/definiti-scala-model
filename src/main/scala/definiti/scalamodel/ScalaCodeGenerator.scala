@@ -32,6 +32,7 @@ object ScalaCodeGenerator {
   def generateExpression(ast: ScalaAST.Expression, indent: String): String = {
     ast match {
       case ast: ScalaAST.SimpleExpression => generateSimpleExpression(ast)
+      case ast: ScalaAST.StringExpression => generateStringExpression(ast)
       case ast: ScalaAST.BinaryOp => generateBinaryOp(ast, indent)
       case ast: ScalaAST.UnaryOp => generateUnaryOp(ast, indent)
       case ast: ScalaAST.Lambda => generateLambda(ast, indent)
@@ -45,6 +46,8 @@ object ScalaCodeGenerator {
   }
 
   def generateSimpleExpression(ast: ScalaAST.SimpleExpression): String = ast.str
+
+  def generateStringExpression(ast: ScalaAST.StringExpression): String = s""""${ast.string}""""
 
   def generateBinaryOp(ast: ScalaAST.BinaryOp, indent: String): String =
     s"${inParens(ast.left, indent)} ${ast.op} ${inParens(ast.right, indent)}"
@@ -67,8 +70,11 @@ object ScalaCodeGenerator {
     s"""if (${generateExpression(ast.cond, indent)}) ${maybeInBlock(ast.ifTrue, indent)}
        |${indent}else ${maybeInBlock(ast.ifFalse, indent)}""".stripMargin
 
-  def generateParameter(ast: ScalaAST.Parameter): String =
-    s"${ast.property.map(p => s"$p ").getOrElse("")}${ast.name}: ${ast.typ}"
+  def generateParameter(ast: ScalaAST.Parameter): String = {
+    val property = ast.property.map(p => s"$p ").getOrElse("")
+    val defaultValue = ast.defaultValue.map(defaultValue => s" = ${generateExpression(defaultValue, "")}").getOrElse("")
+    s"${property}${ast.name}: ${ast.typ}${defaultValue}"
+  }
 
   def generateLambda(ast: ScalaAST.Lambda, indent: String): String =
     s"(${ast.parameters.map(generateParameter).mkString(", ")}) => ${generateExpression(ast.body, indent)}"
@@ -146,6 +152,10 @@ object ScalaCodeGenerator {
     s"""${ast.property.map(p => s"$p ").getOrElse("")}class ${ast.name}${if (ast.privateConstructor) " private" else ""}(${ast.parameters.map(generateParameter).mkString(", ")})${ast.extendz.map(e => s" extends $e").getOrElse("")}${if (ast.body.isEmpty) "" else " " + generateStatement(ScalaAST.Block(ast.body), indent)}"""
   }
 
+  def generateCaseClassDef(ast: ScalaAST.CaseClassDef, indent: String): String = {
+    s"""${ast.property.map(p => s"$p ").getOrElse("")}case class ${ast.name}(${ast.parameters.map(generateParameter).mkString(", ")})${ast.extendz.map(e => s" extends $e").getOrElse("")}${if (ast.body.isEmpty) "" else " " + generateStatement(ScalaAST.Block(ast.body), indent)}"""
+  }
+
   def generateCase(ast: ScalaAST.Case, indent: String): String =
     s"case ${ast.pattern} => ${generateStatement(ast.body, indent)}"
 
@@ -185,6 +195,7 @@ object ScalaCodeGenerator {
       case ast: ScalaAST.Val => generateVal(ast, indent)
       case ast: ScalaAST.TraitDef => generateTraitDef(ast, indent)
       case ast: ScalaAST.ClassDef => generateClassDef(ast, indent)
+      case ast: ScalaAST.CaseClassDef => generateCaseClassDef(ast, indent)
       case ast: ScalaAST.Match => generateMatch(ast, indent)
       case ast: ScalaAST.ObjectDef => generateObjectDef(ast, indent)
       case ast: ScalaAST.ClassVal => generateClassVal(ast, indent)
