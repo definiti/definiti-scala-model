@@ -23,7 +23,7 @@ trait VerificationBuilder {
     ScalaAST.Def1(
       name = "apply",
       typ = s"Verification[${generateParameterType(verification.function.parameters.head.typeReference)}]",
-      generics = Seq.empty,
+      generics = verification.function.genericTypes,
       parameters = Seq(ScalaAST.Parameter(name = "message", typ = "String", defaultValue = Some(ScalaAST.StringExpression(verification.message)))),
       body = Some(generateMessageApplyBody(verification))
     )

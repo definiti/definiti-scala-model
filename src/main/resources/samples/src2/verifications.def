@@ -30,3 +30,14 @@ verification PhoneNumber {
     }
   }
 }
+
+verification NonEmptyList {
+  "The list should not be empty"
+  [A](list: List[A]) => {
+    nonEmptyList(list)
+  }
+}
+
+def nonEmptyList[A](list: List[A]): Boolean => {
+  list.nonEmpty()
+}
