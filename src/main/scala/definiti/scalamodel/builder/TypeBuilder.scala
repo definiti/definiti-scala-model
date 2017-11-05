@@ -8,13 +8,9 @@ trait TypeBuilder {
 
   def generateParameterType(typeReference: AbstractTypeReference): String = {
     typeReference match {
-      case TypeReference(typeName, genericTypes) =>
-        val finalTypeName = library.types.get(typeName) match {
-          case Some(_: NativeClassDefinition) => nativeTypeMapping.getOrElse(typeName, typeName)
-          case Some(aliasType: AliasType) => generateParameterType(aliasType.alias)
-          case _ => typeName
-        }
-        val parameterGenerics = generateGenericTypes(genericTypes)
+      case typeReference: TypeReference =>
+        val finalTypeName = generateMainType(typeReference)
+        val parameterGenerics = generateGenericTypes(typeReference.genericTypes)
         finalTypeName + parameterGenerics
 
       case LambdaReference(inputTypes, outputType) =>
@@ -25,6 +21,14 @@ trait TypeBuilder {
         }
 
         s"(${inputTypes.map(generateOneType)}) => ${generateOneType(outputType)}"
+    }
+  }
+
+  def generateMainType(typeReference: TypeReference): String = {
+    library.types.get(typeReference.typeName) match {
+      case Some(_: NativeClassDefinition) => nativeTypeMapping.getOrElse(typeReference.typeName, typeReference.typeName)
+      case Some(aliasType: AliasType) => generateMainType(aliasType.alias)
+      case _ => typeReference.typeName
     }
   }
 
@@ -52,6 +56,34 @@ trait TypeBuilder {
       definedType.genericTypes.mkString("[", ",", "]")
     } else {
       ""
+    }
+  }
+
+  def verificationsFromTypeReference(typeReference: TypeReference): Seq[VerificationReference] = {
+    library.types.get(typeReference.typeName)
+      .toSeq
+      .flatMap(verificationsFromType)
+  }
+
+  def verificationsFromType(classDefinition: ClassDefinition): Seq[VerificationReference] = {
+    classDefinition match {
+      case aliasType: AliasType => verificationsFromTypeReference(aliasType.alias) ++ aliasType.inherited
+      case definedType: DefinedType => definedType.inherited
+      case _ => Seq.empty
+    }
+  }
+
+  def internalVerificationsFromTypeReference(typeReference: TypeReference): Seq[TypeVerification] = {
+    library.types.get(typeReference.typeName)
+      .toSeq
+      .flatMap(internalVerificationsFromType)
+  }
+
+  def internalVerificationsFromType(classDefinition: ClassDefinition): Seq[TypeVerification] = {
+    classDefinition match {
+      case aliasType: AliasType => internalVerificationsFromTypeReference(aliasType.alias)
+      case definedType: DefinedType => definedType.verifications
+      case _ => Seq.empty
     }
   }
 }
