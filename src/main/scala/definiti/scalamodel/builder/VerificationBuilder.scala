@@ -22,7 +22,7 @@ trait VerificationBuilder {
   private def generateApply(verification: Verification): ScalaAST.Statement = {
     ScalaAST.Def1(
       name = "apply",
-      typ = s"Verification[${generateParameterType(verification.function.parameters.head.typeReference)}]",
+      typ = s"Verification[${generateType(verification.function.parameters.head.typeReference)}]",
       generics = verification.function.genericTypes,
       parameters = Seq(ScalaAST.Parameter(name = "message", typ = "String", defaultValue = Some(ScalaAST.StringExpression(verification.message)))),
       body = Some(generateMessageApplyBody(verification))

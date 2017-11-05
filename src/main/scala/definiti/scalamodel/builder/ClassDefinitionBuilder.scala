@@ -31,7 +31,7 @@ trait ClassDefinitionBuilder {
   private def attributeAsParameter(attributeDefinition: AttributeDefinition): ScalaAST.Parameter = {
     ScalaAST.Parameter(
       name = attributeDefinition.name,
-      typ = generateParameterType(attributeDefinition.typeReference)
+      typ = generateType(attributeDefinition.typeReference)
     )
   }
 
@@ -52,7 +52,7 @@ trait ClassDefinitionBuilder {
     val inheritedVerifications = verificationsFromTypeReference(attributeDefinition.typeReference).map(generateVerificationCall)
     ScalaAST.ClassVal(
       name = s"${attributeDefinition.name}Verification",
-      typ = s"Verification[${generateParameterType(attributeDefinition.typeReference)}]",
+      typ = s"Verification[${generateType(attributeDefinition.typeReference)}]",
       body = Seq(
         ScalaAST.CallMethod(
           target = ScalaAST.SimpleExpression("Verification"),
@@ -69,7 +69,7 @@ trait ClassDefinitionBuilder {
     library.types.get(typeReference.typeName) match {
       case Some(aliasType: AliasType) =>
         Some(ScalaAST.CallAttribute(ScalaAST.SimpleExpression(typeReference.typeName), s"${aliasType.name}Verifications"))
-      case Some(definedType: DefinedType) =>
+      case Some(_: DefinedType) =>
         Some(ScalaAST.CallAttribute(ScalaAST.SimpleExpression(typeReference.typeName), s"allVerifications"))
       case _ => None
     }
@@ -184,7 +184,7 @@ trait ClassDefinitionBuilder {
     val internalVerifications = internalVerificationsFromType(aliasType).map(generateVerificationFromTypeVerification)
     ScalaAST.ClassVal(
       name = s"${aliasType.name}Verifications",
-      typ = s"Verification[${aliasType.alias.typeName}]",
+      typ = s"Verification[${generateType(aliasType.alias)}]",
       body = Seq(
         ScalaAST.CallMethod(
           target = ScalaAST.SimpleExpression("Verification"),

@@ -6,7 +6,7 @@ import definiti.scalamodel.ScalaAST
 trait TypeBuilder {
   self: ScalaModelBuilder =>
 
-  def generateParameterType(typeReference: AbstractTypeReference): String = {
+  def generateType(typeReference: AbstractTypeReference): String = {
     typeReference match {
       case typeReference: TypeReference =>
         val finalTypeName = generateMainType(typeReference)
@@ -47,7 +47,7 @@ trait TypeBuilder {
   def generateTag(aliasType: AliasType): ScalaAST.Statement = {
     ScalaAST.StatementsGroup(
       ScalaAST.TraitDef(s"${aliasType.name}Tag", Seq.empty, isSealed = true),
-      ScalaAST.TypeDef(aliasType.name, s"${generateParameterType(aliasType.alias)} @@ ${aliasType.name}Tag")
+      ScalaAST.TypeDef(aliasType.name, s"${generateType(aliasType.alias)} @@ ${aliasType.name}Tag")
     )
   }
 

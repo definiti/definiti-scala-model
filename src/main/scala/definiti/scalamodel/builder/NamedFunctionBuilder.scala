@@ -9,12 +9,12 @@ trait NamedFunctionBuilder {
   def generateNamedFunction(namedFunction: NamedFunction): ScalaAST.Def1 = {
     ScalaAST.Def1(
       name = namedFunction.name,
-      typ = namedFunction.returnType.typeName,
+      typ = generateType(namedFunction.returnType),
       generics = namedFunction.genericTypes,
       parameters = namedFunction.parameters.map { parameterDefinition =>
         ScalaAST.Parameter(
           name = parameterDefinition.name,
-          typ = generateParameterType(parameterDefinition.typeReference),
+          typ = generateType(parameterDefinition.typeReference),
           property = None
         )
       },

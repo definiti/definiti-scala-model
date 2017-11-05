@@ -15,7 +15,7 @@ trait ExpressionBuilder {
 
   def generateParameter(parameterDefinition: ParameterDefinition): ScalaAST.Parameter = {
     val parameterName = parameterDefinition.name
-    val parameterType = generateParameterType(parameterDefinition.typeReference)
+    val parameterType = generateType(parameterDefinition.typeReference)
     ScalaAST.Parameter(parameterName, parameterType, property = None)
   }
 
