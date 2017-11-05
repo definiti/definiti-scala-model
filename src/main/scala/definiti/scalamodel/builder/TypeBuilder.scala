@@ -2,6 +2,7 @@ package definiti.scalamodel.builder
 
 import definiti.core.ast._
 import definiti.scalamodel.ScalaAST
+import definiti.scalamodel.utils.ListUtils
 
 trait TypeBuilder {
   self: ScalaModelBuilder =>
@@ -10,7 +11,7 @@ trait TypeBuilder {
     typeReference match {
       case typeReference: TypeReference =>
         val finalTypeName = generateMainType(typeReference)
-        val parameterGenerics = generateGenericTypes(typeReference.genericTypes)
+        val parameterGenerics = generateGenericsOfTypes(typeReference)
         finalTypeName + parameterGenerics
 
       case LambdaReference(inputTypes, outputType) =>
@@ -25,16 +26,40 @@ trait TypeBuilder {
   }
 
   def generateMainType(typeReference: TypeReference): String = {
+    generateMainType(typeReference, typeReference.genericTypes)
+  }
+  def generateMainType(typeReference: TypeReference, outerTypeReferences: Seq[TypeReference]): String = {
     library.types.get(typeReference.typeName) match {
-      case Some(_: NativeClassDefinition) => nativeTypeMapping.getOrElse(typeReference.typeName, typeReference.typeName)
-      case Some(aliasType: AliasType) => generateMainType(aliasType.alias)
-      case _ => typeReference.typeName
+      case Some(_: NativeClassDefinition) =>
+        nativeTypeMapping.getOrElse(typeReference.typeName, typeReference.typeName)
+      case Some(aliasType: AliasType) =>
+        generateMainType(aliasType.alias, ListUtils.replaceOrdered(aliasType.alias.genericTypes, outerTypeReferences))
+      case _ =>
+        typeReference.typeName
+    }
+  }
+
+  def generateGenericsOfTypes(typeReference: TypeReference): String = {
+    generateGenericsOfTypes(typeReference, typeReference.genericTypes)
+  }
+  def generateGenericsOfTypes(typeReference: TypeReference, outerTypeReferences: Seq[TypeReference]): String = {
+    library.types.get(typeReference.typeName) match {
+      case Some(_: NativeClassDefinition) =>
+        generateGenericTypes(outerTypeReferences)
+      case Some(aliasType: AliasType) =>
+        generateGenericsOfTypes(aliasType.alias, ListUtils.replaceOrdered(aliasType.alias.genericTypes, outerTypeReferences))
+      case _ =>
+        generateGenericTypes(outerTypeReferences)
     }
   }
 
   def generateGenericTypes(genericTypes: Seq[TypeReference]): String = {
     def generateGenericType(genericType: TypeReference): String = {
-      nativeTypeMapping.getOrElse(genericType.typeName, genericType.typeName) + generateGenericTypes(genericType.genericTypes)
+      val mainType = library.types.get(genericType.typeName) match {
+        case Some(aliasType: AliasType) => generateGenericType(aliasType.alias)
+        case _ => nativeTypeMapping.getOrElse(genericType.typeName, genericType.typeName)
+      }
+      mainType + generateGenericTypes(genericType.genericTypes)
     }
 
     if (genericTypes.nonEmpty) {
@@ -84,6 +109,14 @@ trait TypeBuilder {
       case aliasType: AliasType => internalVerificationsFromTypeReference(aliasType.alias)
       case definedType: DefinedType => definedType.verifications
       case _ => Seq.empty
+    }
+  }
+
+  def generateGenerics(genericTypes: Seq[String]): String = {
+    if (genericTypes.nonEmpty) {
+      genericTypes.mkString("[", ",", "]")
+    } else {
+      ""
     }
   }
 }

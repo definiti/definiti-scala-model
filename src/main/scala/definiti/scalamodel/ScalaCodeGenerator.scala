@@ -153,7 +153,7 @@ object ScalaCodeGenerator {
   }
 
   def generateCaseClassDef(ast: ScalaAST.CaseClassDef, indent: String): String = {
-    s"""${ast.property.map(p => s"$p ").getOrElse("")}case class ${ast.name}(${ast.parameters.map(generateParameter).mkString(", ")})${ast.extendz.map(e => s" extends $e").getOrElse("")}${if (ast.body.isEmpty) "" else " " + generateStatement(ScalaAST.Block(ast.body), indent)}"""
+    s"""${ast.property.map(p => s"$p ").getOrElse("")}case class ${ast.name}${generateGenerics(ast.generics)}(${ast.parameters.map(generateParameter).mkString(", ")})${ast.extendz.map(e => s" extends $e").getOrElse("")}${if (ast.body.isEmpty) "" else " " + generateStatement(ScalaAST.Block(ast.body), indent)}"""
   }
 
   def generateCase(ast: ScalaAST.Case, indent: String): String =

@@ -2,6 +2,7 @@ package definiti.scalamodel.builder
 
 import definiti.core.ast._
 import definiti.scalamodel.ScalaAST
+import definiti.scalamodel.ScalaAST.Expression
 
 trait ClassDefinitionBuilder {
   self: ScalaModelBuilder =>
@@ -23,8 +24,7 @@ trait ClassDefinitionBuilder {
       name = definedType.name,
       extendz = None,
       parameters = definedType.attributes.map(attributeAsParameter),
-      body = Seq.empty,
-      property = None
+      generics = definedType.genericTypes
     )
   }
 
@@ -36,7 +36,7 @@ trait ClassDefinitionBuilder {
   }
 
   private def generateDefinedTypeCompanionObject(definedType: DefinedType): ScalaAST.Statement = {
-    val attributeVerifications = definedType.attributes.map(generateVerificationFromAttribute)
+    val attributeVerifications = definedType.attributes.map(generateVerificationFromAttribute(_, definedType.genericTypes))
     val typeVerifications = generateVerificationFromDefinedType(definedType)
     val allVerifications = generateAllVerificationFromDefinedType(definedType)
     val applyCheck = generateApplyCheck(definedType)
@@ -46,38 +46,52 @@ trait ClassDefinitionBuilder {
     )
   }
 
-  private def generateVerificationFromAttribute(attributeDefinition: AttributeDefinition): ScalaAST.Statement = {
+  private def generateVerificationFromAttribute(attributeDefinition: AttributeDefinition, outerGenerics: Seq[String]): ScalaAST.Statement = {
     val typeVerification = generateTypeVerificationCall(attributeDefinition.typeReference)
-    val directVerifications = attributeDefinition.verifications.map(generateVerificationCall)
+    val directVerifications = attributeDefinition.verifications.map(generateVerificationCall(_, generateGenericTypes(attributeDefinition.typeReference.genericTypes)))
     val inheritedVerifications = verificationsFromTypeReference(attributeDefinition.typeReference).map(generateVerificationCall)
-    ScalaAST.ClassVal(
+    val genericTypes = extractGenericsFromTypeReference(attributeDefinition.typeReference, outerGenerics)
+    generateDefOrVal(
       name = s"${attributeDefinition.name}Verification",
       typ = s"Verification[${generateType(attributeDefinition.typeReference)}]",
-      body = Seq(
-        ScalaAST.CallMethod(
-          target = ScalaAST.SimpleExpression("Verification"),
-          name = "traverse",
-          arguments = typeVerification.toSeq ++ directVerifications ++ inheritedVerifications
-        )
-      ),
-      isLazy = false,
-      isPrivate = false
+      genericTypes = genericTypes,
+      body = ScalaAST.CallMethod(
+        target = ScalaAST.SimpleExpression("Verification"),
+        name = "traverse",
+        arguments = typeVerification.toSeq ++ directVerifications ++ inheritedVerifications
+      )
     )
+  }
+
+  private def extractGenericsFromTypeReference(typeReference: TypeReference, outerGenerics: Seq[String]): Seq[String] = {
+    def containsGeneric(typeReference: TypeReference, generic: String): Boolean = {
+      typeReference.typeName == generic || typeReference.genericTypes.exists(containsGeneric(_, generic))
+    }
+
+    outerGenerics.filter(containsGeneric(typeReference, _))
   }
 
   private def generateTypeVerificationCall(typeReference: TypeReference): Option[ScalaAST.Expression] = {
     library.types.get(typeReference.typeName) match {
       case Some(aliasType: AliasType) =>
-        Some(ScalaAST.CallAttribute(ScalaAST.SimpleExpression(typeReference.typeName), s"${aliasType.name}Verifications"))
+        Some(ScalaAST.CallAttribute(ScalaAST.SimpleExpression(typeReference.typeName), s"${aliasType.name}Verifications${generateGenericTypes(typeReference.genericTypes)}"))
       case Some(_: DefinedType) =>
-        Some(ScalaAST.CallAttribute(ScalaAST.SimpleExpression(typeReference.typeName), s"allVerifications"))
+        Some(ScalaAST.CallAttribute(ScalaAST.SimpleExpression(typeReference.typeName), s"allVerifications${generateGenericTypes(typeReference.genericTypes)}"))
       case _ => None
     }
   }
 
   private def generateVerificationCall(verificationReference: VerificationReference): ScalaAST.Expression = {
+    generateVerificationCall(verificationReference, "")
+  }
+
+  private def generateVerificationCall(verificationReference: VerificationReference, generics: Seq[String]): ScalaAST.Expression = {
+    generateVerificationCall(verificationReference, generateGenerics(generics))
+  }
+
+  private def generateVerificationCall(verificationReference: VerificationReference, generics: String): ScalaAST.Expression = {
     ScalaAST.CallFunction(
-      target = ScalaAST.SimpleExpression(verificationReference.verificationName),
+      target = ScalaAST.SimpleExpression(s"${verificationReference.verificationName}${generics}"),
       arguments = verificationReference.message.map(ScalaAST.StringExpression).toSeq
     )
   }
@@ -85,18 +99,15 @@ trait ClassDefinitionBuilder {
   private def generateVerificationFromDefinedType(definedType: DefinedType): ScalaAST.Statement = {
     val internalVerifications = internalVerificationsFromType(definedType).map(generateVerificationFromTypeVerification)
     val inheritedVerifications = verificationsFromType(definedType).map(generateVerificationCall)
-    ScalaAST.ClassVal(
+    generateDefOrVal(
       name = s"${definedType.name}Verifications",
-      typ = s"Verification[${definedType.name}]",
-      body = Seq(
-        ScalaAST.CallMethod(
-          target = ScalaAST.SimpleExpression("Verification"),
-          name = "traverse",
-          arguments = internalVerifications ++ inheritedVerifications
-        )
-      ),
-      isLazy = false,
-      isPrivate = false
+      typ = s"Verification[${definedType.name}${generateGenerics(definedType.genericTypes)}]",
+      genericTypes = definedType.genericTypes,
+      body = ScalaAST.CallMethod(
+        target = ScalaAST.SimpleExpression("Verification"),
+        name = "traverse",
+        arguments = internalVerifications ++ inheritedVerifications
+      )
     )
   }
 
@@ -106,27 +117,24 @@ trait ClassDefinitionBuilder {
         target = ScalaAST.SimpleExpression(s"${attribute.name}Verification"),
         name = "from",
         arguments = Seq(ScalaAST.Lambda(
-          parameters = Seq(ScalaAST.Parameter("x", typ = definedType.name)),
+          parameters = Seq(ScalaAST.Parameter("x", typ = s"${definedType.name}${generateGenerics(definedType.genericTypes)}")),
           body = ScalaAST.CallAttribute(ScalaAST.SimpleExpression("x"), attribute.name)
         ))
       )
     }
-    ScalaAST.ClassVal(
+    generateDefOrVal(
       name = s"allVerifications",
-      typ = s"Verification[${definedType.name}]",
-      body = Seq(
-        ScalaAST.CallMethod(
-          target = ScalaAST.CallMethod(
-            target = ScalaAST.SimpleExpression("Verification"),
-            name = "traverse",
-            arguments = attributeArguments
-          ),
-          name = "andThen",
-          arguments = Seq(ScalaAST.SimpleExpression(s"${definedType.name}Verifications"))
-        )
-      ),
-      isLazy = false,
-      isPrivate = false
+      typ = s"Verification[${definedType.name}${generateGenerics(definedType.genericTypes)}]",
+      genericTypes = definedType.genericTypes,
+      body = ScalaAST.CallMethod(
+        target = ScalaAST.CallMethod(
+          target = ScalaAST.SimpleExpression("Verification"),
+          name = "traverse",
+          arguments = attributeArguments
+        ),
+        name = "andThen",
+        arguments = Seq(ScalaAST.SimpleExpression(s"${definedType.name}Verifications"))
+      )
     )
   }
 
@@ -141,14 +149,15 @@ trait ClassDefinitionBuilder {
   }
 
   private def generateApplyCheck(definedType: DefinedType): ScalaAST.Statement = {
+    val generics = generateGenerics(definedType.genericTypes)
     ScalaAST.Def1(
-      name = "applyCheck",
-      typ = s"Validation[${definedType.name}]",
+      name = s"applyCheck${generics}",
+      typ = s"Validation[${definedType.name}${generics}]",
       generics = Seq.empty,
       parameters = definedType.attributes.map(attributeAsParameter),
       body = Some(
         ScalaAST.CallMethod(
-          target = ScalaAST.SimpleExpression("allVerifications"),
+          target = ScalaAST.SimpleExpression(s"allVerifications${generics}"),
           name = "verify",
           arguments = Seq(ScalaAST.CallFunction(
             target = ScalaAST.SimpleExpression(definedType.name),
@@ -179,28 +188,42 @@ trait ClassDefinitionBuilder {
 
   private def generateAliasTypeVerifications(aliasType: AliasType): ScalaAST.Statement = {
     val typeVerification = generateTypeVerificationCall(aliasType.alias)
-    val directVerifications = aliasType.inherited.map(generateVerificationCall)
-    val inheritedVerifications = verificationsFromTypeReference(aliasType.alias).map(generateVerificationCall)
+    val inheritedVerifications = verificationsFromType(aliasType).map(generateVerificationCall(_, generateGenericsOfTypes(aliasType.alias)))
     val internalVerifications = internalVerificationsFromType(aliasType).map(generateVerificationFromTypeVerification)
-    ScalaAST.ClassVal(
+    generateDefOrVal(
       name = s"${aliasType.name}Verifications",
       typ = s"Verification[${generateType(aliasType.alias)}]",
-      body = Seq(
-        ScalaAST.CallMethod(
-          target = ScalaAST.SimpleExpression("Verification"),
-          name = "traverse",
-          arguments = typeVerification.toSeq ++ directVerifications ++ inheritedVerifications ++ internalVerifications
-        )
-      ),
-      isLazy = false,
-      isPrivate = false
+      genericTypes = aliasType.genericTypes,
+      body = ScalaAST.CallMethod(
+        target = ScalaAST.SimpleExpression("Verification"),
+        name = "traverse",
+        arguments = typeVerification.toSeq ++ inheritedVerifications ++ internalVerifications
+      )
     )
   }
 
+  private def generateDefOrVal(name: String, typ: String, genericTypes: Seq[String], body: Expression): ScalaAST.Statement = {
+    if (genericTypes.nonEmpty) {
+      ScalaAST.Def0(
+        name = name,
+        typ = typ,
+        generics = genericTypes,
+        body = Some(body)
+      )
+    } else {
+      ScalaAST.ClassVal(
+        name = name,
+        typ = typ,
+        body = Seq(body)
+      )
+    }
+  }
+
   private def generateDefinedAliasApplyCheck(aliasType: AliasType, definedType: DefinedType): ScalaAST.Statement = {
+    val generics = generateGenerics(aliasType.genericTypes)
     ScalaAST.Def1(
-      name = "applyCheck",
-      typ = s"Validation[${definedType.name}]",
+      name = s"applyCheck${generics}",
+      typ = s"Validation[${definedType.name}${generics}]",
       generics = Seq.empty,
       parameters = definedType.attributes.map(attributeAsParameter),
       body = Some(
@@ -213,7 +236,7 @@ trait ClassDefinitionBuilder {
           name = "flatMap",
           arguments = Seq(
             ScalaAST.CallAttribute(
-              target = ScalaAST.SimpleExpression(s"${aliasType.name}Verifications"),
+              target = ScalaAST.SimpleExpression(s"${aliasType.name}Verifications${generics}"),
               name = "verify"
             )
           )
@@ -233,13 +256,15 @@ trait ClassDefinitionBuilder {
   }
 
   private def generateNativeAliasApplyCheck(aliasType: AliasType, alias: NativeClassDefinition): ScalaAST.Statement = {
+    val generics = generateGenerics(aliasType.genericTypes)
+    val fullType = generateType(aliasType.alias)
     ScalaAST.Def1(
-      name = "applyCheck",
-      typ = s"Validation[${alias.name}]",
-      parameters = Seq(ScalaAST.Parameter("input", alias.name)),
+      name = s"applyCheck${generics}",
+      typ = s"Validation[$fullType]",
+      parameters = Seq(ScalaAST.Parameter("input", fullType)),
       body = Some(
         ScalaAST.CallMethod(
-          target = ScalaAST.SimpleExpression(s"${aliasType.name}Verifications"),
+          target = ScalaAST.SimpleExpression(s"${aliasType.name}Verifications${generics}"),
           name = "verify",
           arguments = Seq(ScalaAST.SimpleExpression("input"))
         )

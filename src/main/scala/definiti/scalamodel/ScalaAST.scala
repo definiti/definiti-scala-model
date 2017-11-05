@@ -116,11 +116,18 @@ object ScalaAST {
 
   case class TraitDef(name: String, body: Seq[Statement], isSealed: Boolean = false) extends Statement
 
-  case class CaseClassDef(name: String, extendz: Option[String], parameters: Seq[Parameter], body: Seq[Statement], property: Option[String]) extends Statement
+  case class CaseClassDef(
+    name: String,
+    parameters: Seq[Parameter],
+    extendz: Option[String] = None,
+    generics: Seq[String] = Seq.empty,
+    body: Seq[Statement] = Seq.empty,
+    property: Option[String] = None
+  ) extends Statement
 
   case class ClassDef(name: String, extendz: Option[String], parameters: Seq[Parameter], body: Seq[Statement], property: Option[String], privateConstructor: Boolean) extends Statement
 
-  case class ClassVal(name: String, typ: String, body: Seq[Statement], isLazy: Boolean, isPrivate: Boolean) extends Statement
+  case class ClassVal(name: String, typ: String, body: Seq[Statement], isLazy: Boolean = false, isPrivate: Boolean = false) extends Statement
 
   case class TypeDef(name: String, typ: String) extends Statement
 

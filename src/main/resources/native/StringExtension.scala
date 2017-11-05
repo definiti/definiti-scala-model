@@ -10,4 +10,6 @@ object StringExtension {
   @inline def startsWith(string: String, prefix: String): Boolean = string.startsWith(prefix)
 
   @inline def matches(string: String, regex: String): Boolean = string.matches(regex)
+
+  @inline def length(string: String): BigDecimal = string.length
 }

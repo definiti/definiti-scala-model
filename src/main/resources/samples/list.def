@@ -1,0 +1,40 @@
+package simple
+
+type NonEmptyList[A] = List[A] verifying ListIsNonEmpty
+verification ListIsNonEmpty {
+  "Veuillez indiquer au moins un élément"
+  [A](list: List[A]) => {
+    list.nonEmpty()
+  }
+}
+
+type ListWrapper[A] {
+  list: List[A]
+}
+
+type AliasListWrapper[A] = ListWrapper[A]
+
+type NonEmptyListWrapper[A] = ListWrapper[A] verifying ListWrapperIsNonEmpty
+verification ListWrapperIsNonEmpty {
+  "Veuillez indiquer au moins un élément"
+  [A](list: ListWrapper[A]) => {
+    list.list.nonEmpty()
+  }
+}
+
+type ListOfNonEmptyNumber = List[Number] verifying ListIsNonEmpty
+type Lists {
+  list1: List[String] verifying ListIsNonEmpty
+  list2: NonEmptyList[Number]
+  list3: NonEmptyListWrapper[Number]
+  list4: ListOfNonEmptyNumber
+  list5: List[RequiredString]
+}
+
+type RequiredString = String verifying NonBlank
+verification NonBlank {
+  "The string must not be empty"
+  (string: String) => {
+    string.trim().nonEmpty()
+  }
+}
