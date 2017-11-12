@@ -7,13 +7,14 @@ trait CommonBuilder {
   self: ScalaModelBuilder =>
 
   val nativeTypeMapping = Map(
-    "Number" -> "BigDecimal"
+    "Number" -> "BigDecimal",
+    "Date" -> "LocalDateTime"
   )
 
   val importLines: ScalaAST.StatementsGroup = {
     ScalaAST.StatementsGroup(
       ScalaAST.Import("definiti.native._"),
-      ScalaAST.Import("java.util.Date")
+      ScalaAST.Import("java.time.LocalDateTime")
     )
   }
 
