@@ -25,7 +25,7 @@ object Verification {
     traverse(verifications)
   }
   def traverse[A](verifications: Seq[Verification[A]]): Verification[A] = {
-    verifications match {
+    verifications.toList match {
       case Nil => new NoVerification[A]
       case head :: tail => head.andThen(traverse(tail))
     }
