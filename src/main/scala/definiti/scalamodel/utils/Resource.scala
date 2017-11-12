@@ -20,7 +20,7 @@ trait Resource {
 }
 
 object Resource {
-  private val classLoader = getClass.getClassLoader
+  private val classLoader: ClassLoader = getClass.getClassLoader
 
   def apply(path: String): Resource = {
     val resource = classLoader.getResource(path)

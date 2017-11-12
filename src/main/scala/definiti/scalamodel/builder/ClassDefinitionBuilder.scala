@@ -7,24 +7,26 @@ import definiti.scalamodel.ScalaAST.Expression
 trait ClassDefinitionBuilder {
   self: ScalaModelBuilder =>
 
-  def generateClassDefinition(classDefinition: ClassDefinition): ScalaAST.Statement = classDefinition match {
+  def generateClassDefinition(classDefinition: ClassDefinition): Seq[ScalaAST.TopLevelElement] = classDefinition match {
     case definedType: DefinedType => generateDefinedType(definedType)
     case aliasType: AliasType => generateAliasType(aliasType)
   }
 
 
-  private def generateDefinedType(definedType: DefinedType): ScalaAST.Statement = {
+  private def generateDefinedType(definedType: DefinedType): Seq[ScalaAST.TopLevelElement] = {
     val caseClass = generateCaseClass(definedType)
     val companionObject = generateDefinedTypeCompanionObject(definedType)
-    ScalaAST.StatementsGroup(caseClass, companionObject)
+    caseClass ++ companionObject
   }
 
-  private def generateCaseClass(definedType: DefinedType): ScalaAST.Statement = {
-    ScalaAST.CaseClassDef(
-      name = definedType.name,
-      extendz = None,
-      parameters = definedType.attributes.map(attributeAsParameter),
-      generics = definedType.genericTypes
+  private def generateCaseClass(definedType: DefinedType): Seq[ScalaAST.TopLevelElement] = {
+    Seq(
+      ScalaAST.CaseClassDef(
+        name = definedType.name,
+        extendz = None,
+        parameters = definedType.attributes.map(attributeAsParameter),
+        generics = definedType.genericTypes
+      )
     )
   }
 
@@ -35,14 +37,16 @@ trait ClassDefinitionBuilder {
     )
   }
 
-  private def generateDefinedTypeCompanionObject(definedType: DefinedType): ScalaAST.Statement = {
+  private def generateDefinedTypeCompanionObject(definedType: DefinedType): Seq[ScalaAST.TopLevelElement] = {
     val attributeVerifications = definedType.attributes.map(generateVerificationFromAttribute(_, definedType.genericTypes))
     val typeVerifications = generateVerificationFromDefinedType(definedType)
     val allVerifications = generateAllVerificationFromDefinedType(definedType)
     val applyCheck = generateApplyCheck(definedType)
-    ScalaAST.ObjectDef(
-      name = definedType.name,
-      body = attributeVerifications :+ typeVerifications :+ allVerifications :+ applyCheck
+    Seq(
+      ScalaAST.ObjectDef(
+        name = definedType.name,
+        body = attributeVerifications :+ typeVerifications :+ allVerifications :+ applyCheck
+      )
     )
   }
 
@@ -83,10 +87,6 @@ trait ClassDefinitionBuilder {
 
   private def generateVerificationCall(verificationReference: VerificationReference): ScalaAST.Expression = {
     generateVerificationCall(verificationReference, "")
-  }
-
-  private def generateVerificationCall(verificationReference: VerificationReference, generics: Seq[String]): ScalaAST.Expression = {
-    generateVerificationCall(verificationReference, generateGenerics(generics))
   }
 
   private def generateVerificationCall(verificationReference: VerificationReference, generics: String): ScalaAST.Expression = {
@@ -168,7 +168,7 @@ trait ClassDefinitionBuilder {
     )
   }
 
-  private def generateAliasType(aliasType: AliasType): ScalaAST.Statement = {
+  private def generateAliasType(aliasType: AliasType): Seq[ScalaAST.TopLevelElement] = {
     library.types(aliasType.alias.typeName) match {
       case definedType: DefinedType => generateDefinedAliasType(aliasType, definedType)
       case alias: NativeClassDefinition => generateNativeAliasType(aliasType, alias)
@@ -176,12 +176,14 @@ trait ClassDefinitionBuilder {
     }
   }
 
-  private def generateDefinedAliasType(aliasType: AliasType, definedType: DefinedType): ScalaAST.Statement = {
-    ScalaAST.ObjectDef(
-      name = aliasType.name,
-      body = Seq(
-        generateAliasTypeVerifications(aliasType),
-        generateDefinedAliasApplyCheck(aliasType, definedType)
+  private def generateDefinedAliasType(aliasType: AliasType, definedType: DefinedType): Seq[ScalaAST.TopLevelElement] = {
+    Seq(
+      ScalaAST.ObjectDef(
+        name = aliasType.name,
+        body = Seq(
+          generateAliasTypeVerifications(aliasType),
+          generateDefinedAliasApplyCheck(aliasType, definedType)
+        )
       )
     )
   }
@@ -245,12 +247,14 @@ trait ClassDefinitionBuilder {
     )
   }
 
-  private def generateNativeAliasType(aliasType: AliasType, alias: NativeClassDefinition): ScalaAST.Statement = {
-    ScalaAST.ObjectDef(
-      name = aliasType.name,
-      body = Seq(
-        generateAliasTypeVerifications(aliasType),
-        generateNativeAliasApplyCheck(aliasType, alias)
+  private def generateNativeAliasType(aliasType: AliasType, alias: NativeClassDefinition): Seq[ScalaAST.TopLevelElement] = {
+    Seq(
+      ScalaAST.ObjectDef(
+        name = aliasType.name,
+        body = Seq(
+          generateAliasTypeVerifications(aliasType),
+          generateNativeAliasApplyCheck(aliasType, alias)
+        )
       )
     )
   }

@@ -6,6 +6,7 @@ import definiti.core._
 import definiti.core.ast.{Library, Root}
 import definiti.scalamodel.Configuration
 import definiti.scalamodel.builder.ScalaModelBuilder
+import definiti.scalamodel.generator.ScalaProjectGenerator
 import definiti.scalamodel.utils.Resource
 
 class ScalaModelGeneratorPlugin extends GeneratorPlugin {
@@ -26,8 +27,9 @@ class ScalaModelGeneratorPlugin extends GeneratorPlugin {
   }
 
   def generatedSources(root: Root, library: Library): Map[Path, String] = {
-    new ScalaModelBuilder(config, library)
-      .buildScalaFiles(root)
+    val scalaRoot = new ScalaModelBuilder(config, library).build(root)
+    val scalaFiles = new ScalaProjectGenerator(config).generateProject(scalaRoot)
+    scalaFiles
       .map(scalaFile => scalaFile.path -> scalaFile.content)
       .toMap
   }

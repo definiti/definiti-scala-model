@@ -21,7 +21,7 @@ object StringUtils {
     } else if (source.contains(separator)) {
       source.substring(0, source.lastIndexOf(separator))
     } else {
-      source
+      ""
     }
   }
 

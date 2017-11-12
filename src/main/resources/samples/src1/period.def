@@ -1,0 +1,27 @@
+package person
+
+type Period {
+  start: Date
+  end: Date
+
+  verify {
+    "end should be after start"
+    (period) => { period.end > period.start || period.end == period.start }
+  }
+}
+
+verification YearPeriod {
+  "The period must last one year"
+  (period: Period) => {
+    // Not quite "right" but show the idea
+    // hypothese: timestamp in seconds
+    period.end.timestamp - period.start.timestamp == 365*24*3600
+  }
+}
+
+verification StartJanuaryFirst {
+  "The period must start on january the first"
+  (period: Period) => { period.start.day == 1 && period.start.month == 1 }
+}
+
+type CivilYear = Period verifying YearPeriod verifying StartJanuaryFirst

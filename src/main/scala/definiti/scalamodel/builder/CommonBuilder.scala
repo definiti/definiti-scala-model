@@ -1,7 +1,6 @@
 package definiti.scalamodel.builder
 
 import definiti.core.ast._
-import definiti.scalamodel.ScalaAST
 
 trait CommonBuilder {
   self: ScalaModelBuilder =>
@@ -10,13 +9,6 @@ trait CommonBuilder {
     "Number" -> "BigDecimal",
     "Date" -> "LocalDateTime"
   )
-
-  val importLines: ScalaAST.StatementsGroup = {
-    ScalaAST.StatementsGroup(
-      ScalaAST.Import("definiti.native._"),
-      ScalaAST.Import("java.time.LocalDateTime")
-    )
-  }
 
   def verificationsFromNamespace(namespace: Namespace): Seq[Verification] = {
     namespace.elements.collect {

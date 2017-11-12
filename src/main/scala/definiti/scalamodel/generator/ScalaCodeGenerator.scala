@@ -1,5 +1,6 @@
-package definiti.scalamodel
+package definiti.scalamodel.generator
 
+import definiti.scalamodel.ScalaAST
 import definiti.scalamodel.ScalaAST.Expression
 
 object ScalaCodeGenerator {

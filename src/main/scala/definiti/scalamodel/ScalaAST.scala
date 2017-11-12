@@ -3,6 +3,37 @@ package definiti.scalamodel
 import java.nio.file.Path
 
 object ScalaAST {
+  type TopLevelElement = ScalaAST.PackageElement with ScalaAST.Statement
+
+  case class ScalaFile(path: Path, content: String)
+
+  case class Root(
+    elements: Seq[PackageElement]
+  )
+
+  sealed trait PackageElement
+
+  case class Package(
+    name: String,
+    elements: Seq[PackageElement]
+  ) extends PackageElement
+
+  case class PackageDeclaration(name: String) extends Statement
+
+  case class Import(name: String) extends Statement
+
+  case class PackageDef(name: String, body: Seq[Statement]) extends Statement
+
+  case class ObjectDef(name: String, body: Seq[Statement]) extends Statement with PackageElement
+
+  case class CaseClassDef(
+    name: String,
+    parameters: Seq[Parameter],
+    extendz: Option[String] = None,
+    generics: Seq[String] = Seq.empty,
+    body: Seq[Statement] = Seq.empty,
+    property: Option[String] = None
+  ) extends Statement with PackageElement
 
   sealed trait Statement
 
@@ -48,7 +79,7 @@ object ScalaAST {
 
   case class New(name: String, arguments: Seq[Expression]) extends Expression
 
-  case class Comment(str: String) extends Statement
+  case class Comment(str: String) extends Statement with PackageElement
 
   case class Def0(
     name: String,
@@ -56,7 +87,7 @@ object ScalaAST {
     generics: Seq[String] = Seq.empty,
     body: Option[Expression] = None,
     property: Option[String] = None
-  ) extends Statement
+  ) extends Statement with PackageElement
 
   case class Def1(
     name: String,
@@ -65,7 +96,7 @@ object ScalaAST {
     parameters: Seq[Parameter] = Seq.empty,
     body: Option[Expression] = None,
     property: Option[String] = None
-  ) extends Statement
+  ) extends Statement with PackageElement
 
   case class Def2(
     name: String,
@@ -75,15 +106,7 @@ object ScalaAST {
     parameters2: Seq[Parameter] = Seq.empty,
     body: Option[Expression] = None,
     property: Option[String] = None
-  ) extends Statement
-
-  case class ScalaFile(path: Path, content: String)
-
-  case class PackageDeclaration(name: String) extends Statement
-
-  case class Import(name: String) extends Statement
-
-  case class PackageDef(name: String, body: Seq[Statement]) extends Statement
+  ) extends Statement with PackageElement
 
   case class StatementsGroup(statements: Seq[Statement]) extends Statement {
     def +(addedStatement: Statement): StatementsGroup = plus(addedStatement)
@@ -116,15 +139,6 @@ object ScalaAST {
 
   case class TraitDef(name: String, body: Seq[Statement], isSealed: Boolean = false) extends Statement
 
-  case class CaseClassDef(
-    name: String,
-    parameters: Seq[Parameter],
-    extendz: Option[String] = None,
-    generics: Seq[String] = Seq.empty,
-    body: Seq[Statement] = Seq.empty,
-    property: Option[String] = None
-  ) extends Statement
-
   case class ClassDef(name: String, extendz: Option[String], parameters: Seq[Parameter], body: Seq[Statement], property: Option[String], privateConstructor: Boolean) extends Statement
 
   case class ClassVal(name: String, typ: String, body: Seq[Statement], isLazy: Boolean = false, isPrivate: Boolean = false) extends Statement
@@ -133,7 +147,5 @@ object ScalaAST {
 
   case class Case(pattern: String, body: Statement)
   case class Match(expr: Expression, cases: Seq[Case]) extends Statement
-
-  case class ObjectDef(name: String, body: Seq[Statement]) extends Statement
 
 }

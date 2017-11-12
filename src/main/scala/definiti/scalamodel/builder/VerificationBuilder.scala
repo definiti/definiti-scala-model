@@ -6,13 +6,11 @@ import definiti.scalamodel.ScalaAST
 trait VerificationBuilder {
   self: ScalaModelBuilder =>
 
-  def generateVerification(verification: Verification): ScalaAST.Statement = {
-    ScalaAST
-      .StatementsGroup(verification.comment.map(comment => ScalaAST.Comment(comment.trim)))
-      .plus(generateVerificationObject(verification))
+  def generateVerification(verification: Verification): Seq[ScalaAST.TopLevelElement] = {
+    verification.comment.map(comment => ScalaAST.Comment(comment.trim)).toSeq :+ generateVerificationObject(verification)
   }
 
-  private def generateVerificationObject(verification: Verification): ScalaAST.Statement = {
+  private def generateVerificationObject(verification: Verification): ScalaAST.TopLevelElement = {
     ScalaAST.ObjectDef(
       name = verification.name,
       body = Seq(generateApply(verification))

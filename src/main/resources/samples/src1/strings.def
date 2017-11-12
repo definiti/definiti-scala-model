@@ -1,0 +1,13 @@
+package functions
+
+def contains[A](list: List[A], element: A): Boolean => {
+  list.exists((item: A) => {item == element})
+}
+
+def nonBlank(string: String): Boolean => {
+  string.trim().nonEmpty()
+}
+
+def isEmail(string: String): Boolean => {
+  string.matches("(.+)@(.+)")
+}
