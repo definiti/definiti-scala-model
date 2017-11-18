@@ -6,7 +6,7 @@ type Period {
 
   verify {
     "end should be after start"
-    (period) => { period.end > period.start || period.end == period.start }
+    (period) => { period.end.timestamp > period.start.timestamp || period.end.timestamp == period.start.timestamp }
   }
 }
 

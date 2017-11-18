@@ -16,7 +16,7 @@ type Person {
   verify {
     "At least one email is invalid"
     (person) => {
-      person.emails.forall(isEmail)
+      person.emails.forAll(isEmail)
     }
   }
 }
@@ -25,8 +25,11 @@ type Identity {
   firstName: RequiredNoun
   lastName: RequiredNoun
   email: RequiredString
+  phones: List[Phone]
 }
 
 type RequiredString = String verifying NonEmptyString
 
 type RequiredNoun = String verifying NonEmptyString("This noun must be defined")
+
+type Phone = String verifying NonBlank("Please provide a phone number") verifying PhoneNumber
