@@ -119,4 +119,20 @@ trait TypeBuilder {
       ""
     }
   }
+
+  def isList(typeReference: TypeReference): Boolean = {
+    library.types.get(typeReference.typeName).exists {
+      case native: NativeClassDefinition => native.name == "List"
+      case alias: AliasType => isList(alias.alias)
+      case _ => false
+    }
+  }
+
+  def isOption(typeReference: TypeReference): Boolean = {
+    library.types.get(typeReference.typeName).exists {
+      case native: NativeClassDefinition => native.name == "Option"
+      case alias: AliasType => isList(alias.alias)
+      case _ => false
+    }
+  }
 }

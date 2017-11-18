@@ -3,22 +3,30 @@ package definiti.native
 sealed trait Verification[A] {
   def verify[B <: A](value: B): Validation[B]
 
-  def andThen(message: String)(check: A => Boolean): Verification[A]
+  def andThen(message: String)(check: A => Boolean): Verification[A] = {
+    new VerificationGroup[A](Seq(this, new ValueVerification[A](check, message)))
+  }
 
-  def andThen(verification: Verification[A]): Verification[A]
+  def andThen(verification: Verification[A]): Verification[A] = {
+    new VerificationGroup[A](Seq(this, verification))
+  }
 
-  def andBefore(beforeVerification: Verification[A]): Verification[A]
+  def andBefore(beforeVerification: Verification[A]): Verification[A] = {
+    new VerificationGroup[A](Seq(beforeVerification, this))
+  }
 
-  def withMessage(message: String): Verification[A]
+  def withMessage(message: String): Verification[A] = this
 
-  def from[B](f: B => A): Verification[B]
+  def from[B](f: B => A): Verification[B] = {
+    new VerificationMap[A, B](this, f)
+  }
 }
 
 object Verification {
   def apply[A](): Verification[A] = new NoVerification[A]
 
   def apply[A](message: String)(check: A => Boolean): Verification[A] = {
-    new SomeVerification(new NoVerification[A], check, message)
+    new ValueVerification(check, message)
   }
 
   def traverse[A](verifications: Verification[A]*)(implicit dummyImplicit: DummyImplicit): Verification[A] = {
@@ -32,49 +40,68 @@ object Verification {
   }
 }
 
-final class NoVerification[A] extends Verification[A] {
-  override def verify[B <: A](value: B): Validation[B] = Valid(value)
-
-  override def andThen(message: String)(check: A => Boolean): Verification[A] = new SomeVerification(this, check, message)
-
-  override def andThen(verification: Verification[A]): Verification[A] = verification
-
-  override def andBefore(beforeVerification: Verification[A]): Verification[A] = beforeVerification
-
-  override def withMessage(message: String): Verification[A] = this
-
-  override def from[B](f: B => A): Verification[B] = new NoVerification[B]
+final class VerificationGroup[A](verifications: Seq[Verification[A]]) extends Verification[A] {
+  override def verify[B <: A](value: B) = {
+    val validations = verifications.map(_.verify(value))
+    if (validations.forall(_.isValid)) {
+      Valid(value)
+    } else {
+      Invalid {
+        validations.collect {
+          case Invalid(errors) => errors
+        }.flatten
+      }
+    }
+  }
 }
 
-final class SomeVerification[A](inner: Verification[A], check: A => Boolean, message: String) extends Verification[A] {
-  override def verify[B <: A](value: B): Validation[B] = {
-    inner.verify(value) match {
+final class VerificationMap[A, C](verification: Verification[A], map: C => A) extends Verification[C] {
+  override def verify[B <: C](value: B): Validation[B] = {
+    verification.verify(map(value)) match {
+      case Valid(_) => Valid(value)
       case Invalid(errors) => Invalid(errors)
-      case Valid(validValue) =>
-        if (check(validValue)) {
-          Valid(validValue)
-        } else {
-          Invalid(message)
-        }
+    }
+  }
+}
+
+final class NoVerification[A] extends Verification[A] {
+  override def verify[B <: A](value: B): Validation[B] = Valid(value)
+}
+
+final class ValueVerification[A](check: A => Boolean, message: String) extends Verification[A] {
+  override def verify[B <: A](value: B): Validation[B] = {
+    if (check(value)) {
+      Valid(value)
+    } else {
+      Invalid(message)
     }
   }
 
-  override def andThen(message: String)(check: A => Boolean): Verification[A] = {
-    new SomeVerification(this, check, message)
+  override def withMessage(message: String) = new ValueVerification(check, message)
+}
+
+final class ListVerification[A](verification: Verification[A]) extends Verification[List[A]] {
+  override def verify[B <: List[A]](value: B) = {
+    val validations = value.map(verification.verify)
+    if (validations.forall(_.isValid)) {
+      Valid(value)
+    } else {
+      Invalid {
+        validations.collect {
+          case Invalid(errors) => errors
+        }.flatten
+      }
+    }
   }
+}
 
-  override def andThen(verification: Verification[A]): Verification[A] = verification match {
-    case _: NoVerification[A] => this
-    case target: SomeVerification[A] => verification.andBefore(this)
-  }
-
-  override def andBefore(beforeVerification: Verification[A]): Verification[A] = {
-    new SomeVerification(inner.andBefore(beforeVerification), check, message)
-  }
-
-  override def withMessage(message: String): Verification[A] = new SomeVerification(inner, check, message)
-
-  override def from[B](f: B => A): Verification[B] = {
-    new SomeVerification[B](inner.from(f), f.andThen(check), message)
+final class OptionVerification[A](verification: Verification[A]) extends Verification[Option[A]] {
+  override def verify[B <: Option[A]](value: B) = {
+    value
+      .map {
+        case Valid(_) => Valid(value)
+        case Invalid(errors) => Invalid(errors)
+      }
+      .getOrElse(Valid(value))
   }
 }

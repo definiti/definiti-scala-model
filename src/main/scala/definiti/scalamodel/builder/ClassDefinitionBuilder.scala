@@ -54,6 +54,7 @@ trait ClassDefinitionBuilder {
     val typeVerification = generateTypeVerificationCall(attributeDefinition.typeReference)
     val directVerifications = attributeDefinition.verifications.map(generateVerificationCall(_, generateGenericTypes(attributeDefinition.typeReference.genericTypes)))
     val inheritedVerifications = verificationsFromTypeReference(attributeDefinition.typeReference).map(generateVerificationCall)
+    val deepVerifications = generateDeepVerification(attributeDefinition.typeReference)
     val genericTypes = extractGenericsFromTypeReference(attributeDefinition.typeReference, outerGenerics)
     generateDefOrVal(
       name = s"${attributeDefinition.name}Verification",
@@ -62,7 +63,7 @@ trait ClassDefinitionBuilder {
       body = ScalaAST.CallMethod(
         target = ScalaAST.SimpleExpression("Verification"),
         name = "traverse",
-        arguments = typeVerification.toSeq ++ directVerifications ++ inheritedVerifications
+        arguments = typeVerification.toSeq ++ directVerifications ++ inheritedVerifications ++ deepVerifications
       )
     )
   }
@@ -94,6 +95,22 @@ trait ClassDefinitionBuilder {
       target = ScalaAST.SimpleExpression(s"${verificationReference.verificationName}${generics}"),
       arguments = verificationReference.message.map(ScalaAST.StringExpression).toSeq
     )
+  }
+
+  private def generateDeepVerification(typeReference: TypeReference): Option[ScalaAST.Expression] = {
+    if (isList(typeReference)) {
+      Some(ScalaAST.New(
+        name = s"ListVerification${generateGenericTypes(typeReference.genericTypes)}",
+        arguments = typeReference.genericTypes.flatMap(generateTypeVerificationCall)
+      ))
+    } else if (isOption(typeReference)) {
+      Some(ScalaAST.New(
+        name = s"OptionVerification${generateGenericTypes(typeReference.genericTypes)}",
+        arguments = typeReference.genericTypes.flatMap(generateTypeVerificationCall)
+      ))
+    } else {
+      None
+    }
   }
 
   private def generateVerificationFromDefinedType(definedType: DefinedType): ScalaAST.Statement = {
