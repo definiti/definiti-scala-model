@@ -2,11 +2,11 @@ organization := "definiti"
 
 name := "scala-model"
 
-version := "0.1.0"
+version := "0.2.0-snapshot"
 
 scalaVersion := "2.12.1"
 
-libraryDependencies += "definiti" %%  "core" % "0.2.0"
+libraryDependencies += "definiti" %%  "core" % "0.2.0-snapshot"
 libraryDependencies += "commons-io" % "commons-io" % "2.5"
 libraryDependencies += "com.typesafe" % "config" % "1.3.1"
 libraryDependencies += "com.typesafe.scala-logging" %% "scala-logging" % "3.5.0"
