@@ -11,12 +11,24 @@ object ScalaAST {
     elements: Seq[PackageElement]
   )
 
+  object Root {
+    def apply(elements: PackageElement*)(implicit dummyImplicit: DummyImplicit): Root = {
+      new Root(elements)
+    }
+  }
+
   sealed trait PackageElement
 
   case class Package(
     name: String,
     elements: Seq[PackageElement]
   ) extends PackageElement
+
+  object Package {
+    def apply(name: String, elements: PackageElement*)(implicit dummyImplicit: DummyImplicit): Package = {
+      new Package(name, elements)
+    }
+  }
 
   case class PackageDeclaration(name: String) extends Statement
 
@@ -35,6 +47,12 @@ object ScalaAST {
     property: Option[String] = None
   ) extends Statement with PackageElement
 
+  object CaseClassDef {
+    def apply(name: String, parameters: Parameter*): CaseClassDef = {
+      new CaseClassDef(name, parameters)
+    }
+  }
+
   sealed trait Statement
 
   sealed trait Expression extends Statement
@@ -52,6 +70,13 @@ object ScalaAST {
   case class IfThenElse(cond: Expression, ifTrue: Expression, ifFalse: Expression) extends If
 
   case class Parameter(name: String, typ: String, defaultValue: Option[Expression] = None, property: Option[String] = None)
+
+  object Parameter {
+    def apply(name: String, typ: String, defaultValue: Expression): Parameter = {
+      new Parameter(name, typ, Some(defaultValue), None)
+    }
+  }
+
   case class Lambda(parameters: Seq[Parameter], body: Expression) extends Expression
 
   case class CallAttribute(target: Expression, name: String) extends Expression with Unambiguous
@@ -98,6 +123,12 @@ object ScalaAST {
     property: Option[String] = None
   ) extends Statement with PackageElement
 
+  object Def1 {
+    def apply(name: String, typ: String, parameters: Seq[Parameter], body: Expression): Def1 = {
+      new Def1(name, typ, Seq.empty, parameters, Some(body), None)
+    }
+  }
+
   case class Def2(
     name: String,
     typ: String,
@@ -142,6 +173,10 @@ object ScalaAST {
   case class ClassDef(name: String, extendz: Option[String], parameters: Seq[Parameter], body: Seq[Statement], property: Option[String], privateConstructor: Boolean) extends Statement
 
   case class ClassVal(name: String, typ: String, body: Seq[Statement], isLazy: Boolean = false, isPrivate: Boolean = false) extends Statement
+
+  object ClassVal {
+    def apply(name: String, typ: String, body: Statement*): ClassVal = new ClassVal(name, typ, body)
+  }
 
   case class TypeDef(name: String, typ: String) extends Statement
 
