@@ -14,7 +14,7 @@ private[scalamodel] trait Configuration {
 private[scalamodel] case class JsonConfiguration(format: JsonFormat.Value, validation: JsonValidation.Value)
 
 private[scalamodel] object JsonFormat extends Enumeration {
-  val spray, none = Value
+  val play, spray, none = Value
 
   def fromString(value: String): Option[JsonFormat.Value] = {
     values.find(_.toString == value)

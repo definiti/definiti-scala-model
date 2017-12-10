@@ -80,6 +80,11 @@ object ScalaAST {
   case class Lambda(parameters: Seq[Parameter], body: Expression) extends Expression
 
   case class CallAttribute(target: Expression, name: String) extends Expression with Unambiguous
+
+  object CallAttribute {
+    def apply(target: String, name: String): CallAttribute = new CallAttribute(SimpleExpression(target), name)
+  }
+
   case class CallMethod(target: Expression, name: String, arguments: Seq[Expression]) extends Expression with Unambiguous
 
   object CallMethod {

@@ -6,29 +6,28 @@ import definiti.scalamodel.{Configuration, JsonFormat, JsonValidation, ScalaAST}
 trait JsonBuilder {
   self: ScalaModelBuilder =>
 
-  private val sprayJsonBuilder: JsonBuilderStrategy = new SprayJsonBuilder(config)
+  private val jsonBuilder: JsonBuilderStrategy = config.json.format match {
+    case JsonFormat.spray => SprayJsonBuilder
+    case JsonFormat.play => PlayJsonBuilder
+    case JsonFormat.none => NoJsonBuilder
+  }
 
   def buildJsonConverter(definedType: DefinedType): Seq[ScalaAST.Statement] = {
-    config.json.format match {
-      case JsonFormat.spray => sprayJsonBuilder.build(definedType)
-      case JsonFormat.none => Seq.empty
+    config.json.validation match {
+      case JsonValidation.flat => jsonBuilder.buildWithFlatValidation(definedType)
+      case JsonValidation.none => jsonBuilder.buildWithoutValidation(definedType)
     }
   }
 }
 
 trait JsonBuilderStrategy {
-  def build(definedType: DefinedType): Seq[ScalaAST.Statement]
+  def buildWithFlatValidation(definedType: DefinedType): Seq[ScalaAST.Statement]
+
+  def buildWithoutValidation(definedType: DefinedType): Seq[ScalaAST.Statement]
 }
 
-class SprayJsonBuilder(config: Configuration) extends JsonBuilderStrategy {
-  override def build(definedType: DefinedType): Seq[ScalaAST.Statement] = {
-    config.json.validation match {
-      case JsonValidation.flat => buildWithFlatValidation(definedType)
-      case JsonValidation.none => buildWithoutValidation(definedType)
-    }
-  }
-
-  private def buildWithFlatValidation(definedType: DefinedType): Seq[ScalaAST.Statement] = {
+object SprayJsonBuilder extends JsonBuilderStrategy {
+  def buildWithFlatValidation(definedType: DefinedType): Seq[ScalaAST.Statement] = {
     Seq(
       ScalaAST.Import("spray.json.RootJsonFormat"),
       ScalaAST.Import("definiti.native.JsonSpraySupport._"),
@@ -52,7 +51,7 @@ class SprayJsonBuilder(config: Configuration) extends JsonBuilderStrategy {
     )
   }
 
-  private def buildWithoutValidation(definedType: DefinedType): Seq[ScalaAST.Statement] = {
+  def buildWithoutValidation(definedType: DefinedType): Seq[ScalaAST.Statement] = {
     Seq(
       ScalaAST.Import("spray.json.RootJsonFormat"),
       ScalaAST.Import("definiti.native.JsonSpraySupport._"),
@@ -67,4 +66,42 @@ class SprayJsonBuilder(config: Configuration) extends JsonBuilderStrategy {
       )
     )
   }
+}
+
+object PlayJsonBuilder extends JsonBuilderStrategy {
+  def buildWithFlatValidation(definedType: DefinedType): Seq[ScalaAST.Statement] = {
+    Seq(
+      ScalaAST.Import("play.api.libs.json._"),
+      ScalaAST.Import("definiti.native.JsonPlaySupport._"),
+      ScalaAST.ClassVal(
+        name = s"${definedType.name}Format",
+        typ = s"OFormat[${definedType.name}]",
+        isImplicit = true,
+        body = Seq(ScalaAST.CallFunction(
+          "formatWithValidation",
+          ScalaAST.CallAttribute("Json", s"format[${definedType.name}]"),
+          ScalaAST.SimpleExpression("allVerifications")
+        ))
+      )
+    )
+  }
+
+  def buildWithoutValidation(definedType: DefinedType): Seq[ScalaAST.Statement] = {
+    Seq(
+      ScalaAST.Import("play.api.libs.json._"),
+      ScalaAST.Import("definiti.native.JsonPlaySupport._"),
+      ScalaAST.ClassVal(
+        name = s"${definedType.name}Format",
+        typ = s"OFormat[${definedType.name}]",
+        isImplicit = true,
+        body = Seq(ScalaAST.CallAttribute("Json", s"format[${definedType.name}]"))
+      )
+    )
+  }
+}
+
+object NoJsonBuilder extends JsonBuilderStrategy {
+  override def buildWithFlatValidation(definedType: DefinedType): Seq[ScalaAST.Statement] = Seq.empty
+
+  override def buildWithoutValidation(definedType: DefinedType): Seq[ScalaAST.Statement] = Seq.empty
 }

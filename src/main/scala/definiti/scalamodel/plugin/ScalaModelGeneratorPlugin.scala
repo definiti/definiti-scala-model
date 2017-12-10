@@ -31,6 +31,8 @@ class ScalaModelGeneratorPlugin extends GeneratorPlugin {
 
   private def jsonSources: Map[Path, String] = {
     config.json.format match {
+      case JsonFormat.play =>
+        Map(destinationDirectory.resolve("JsonPlaySupport.scala") -> nativeSourceDirectory.resolve("json").resolve("JsonPlaySupport.scala").content)
       case JsonFormat.spray =>
         Map(destinationDirectory.resolve("JsonSpraySupport.scala") -> nativeSourceDirectory.resolve("json").resolve("JsonSpraySupport.scala").content)
       case JsonFormat.none =>
