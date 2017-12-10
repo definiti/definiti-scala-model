@@ -3,10 +3,11 @@ package definiti.scalamodel.builder
 import definiti.core.ast.{Library, Namespace, Root}
 import definiti.scalamodel.{Configuration, ScalaAST}
 
-class ScalaModelBuilder(config: Configuration, val library: Library)
+class ScalaModelBuilder(val config: Configuration, val library: Library)
   extends CommonBuilder
     with ClassDefinitionBuilder
     with ExpressionBuilder
+    with JsonBuilder
     with NamedFunctionBuilder
     with PackageBuilder
     with TypeBuilder

@@ -42,10 +42,11 @@ trait ClassDefinitionBuilder {
     val typeVerifications = generateVerificationFromDefinedType(definedType)
     val allVerifications = generateAllVerificationFromDefinedType(definedType)
     val applyCheck = generateApplyCheck(definedType)
+    val jsonSupport = buildJsonConverter(definedType)
     Seq(
       ScalaAST.ObjectDef(
         name = definedType.name,
-        body = attributeVerifications :+ typeVerifications :+ allVerifications :+ applyCheck
+        body = (attributeVerifications :+ typeVerifications :+ allVerifications :+ applyCheck) ++ jsonSupport
       )
     )
   }

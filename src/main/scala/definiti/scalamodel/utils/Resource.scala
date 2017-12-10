@@ -17,6 +17,10 @@ trait Resource {
   def content: String
 
   def name: String
+
+  def resolve(filename: String): Resource
+
+  def isDirectory: Boolean
 }
 
 object Resource {
@@ -49,6 +53,10 @@ case class FileResource(file: File) extends Resource {
   }
 
   override def name: String = file.name
+
+  override def resolve(filename: String): Resource = FileResource(file.path.resolve(filename))
+
+  override def isDirectory: Boolean = file.isDirectory
 }
 
 case class JarResource(jar: JarFile, path: String) extends Resource {
@@ -85,4 +93,14 @@ case class JarResource(jar: JarFile, path: String) extends Resource {
       pathWithoutTrailingSlash
     }
   }
+
+  override def resolve(filename: String): Resource = {
+    if (path.endsWith("/")) {
+      JarResource(jar, path + filename)
+    } else {
+      JarResource(jar, path + "/" + filename)
+    }
+  }
+
+  override def isDirectory: Boolean = jar.getJarEntry(path) == null
 }

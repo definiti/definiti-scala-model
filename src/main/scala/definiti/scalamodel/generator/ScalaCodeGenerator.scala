@@ -172,8 +172,9 @@ object ScalaCodeGenerator {
 
   def generateClassVal(ast: ScalaAST.ClassVal, indent: String): String = {
     val visibility = if (ast.isPrivate) "private" else ""
+    val implicitness = if (ast.isImplicit) "implicit" else ""
     val lazyness = if (ast.isLazy) "lazy" else ""
-    val declaration = s"$visibility $lazyness val ${ast.name}: ${ast.typ}".trim
+    val declaration = s"$visibility $implicitness $lazyness val ${ast.name}: ${ast.typ}".trim
     val assignation = ast.body.map(a => generateStatement(a, inc(indent))).mkString(s"\n${inc(indent)}")
     s"$declaration = $assignation"
   }

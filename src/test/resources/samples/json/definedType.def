@@ -1,0 +1,10 @@
+package my
+
+type MyFirstType {
+  myAttribute: String
+}
+
+type MySecondType {
+  myFirstAttribute: Number
+  mySecondAttribute: MyFirstType
+}

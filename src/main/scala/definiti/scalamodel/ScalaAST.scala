@@ -83,8 +83,14 @@ object ScalaAST {
   case class CallMethod(target: Expression, name: String, arguments: Seq[Expression]) extends Expression with Unambiguous
 
   object CallMethod {
+    def apply(target: String, name: String): CallMethod = {
+      new CallMethod(ScalaAST.SimpleExpression(target), name, Seq.empty)
+    }
     def apply(target: String, name: String, arguments: Expression*): CallMethod = {
       new CallMethod(ScalaAST.SimpleExpression(target), name, arguments)
+    }
+    def apply(target: String, name: String, arguments: String*)(implicit dummyImplicit: DummyImplicit): CallMethod = {
+      new CallMethod(ScalaAST.SimpleExpression(target), name, arguments.map(SimpleExpression))
     }
   }
 
@@ -172,7 +178,7 @@ object ScalaAST {
 
   case class ClassDef(name: String, extendz: Option[String], parameters: Seq[Parameter], body: Seq[Statement], property: Option[String], privateConstructor: Boolean) extends Statement
 
-  case class ClassVal(name: String, typ: String, body: Seq[Statement], isLazy: Boolean = false, isPrivate: Boolean = false) extends Statement
+  case class ClassVal(name: String, typ: String, body: Seq[Statement], isLazy: Boolean = false, isPrivate: Boolean = false, isImplicit: Boolean = false) extends Statement
 
   object ClassVal {
     def apply(name: String, typ: String, body: Statement*): ClassVal = new ClassVal(name, typ, body)
