@@ -80,7 +80,7 @@ final class ValueVerification[A](check: A => Boolean, message: String) extends V
   override def withMessage(message: String) = new ValueVerification(check, message)
 }
 
-final class ListVerification[A](verification: Verification[A]) extends Verification[List[A]] {
+final class ListVerification[A](verification: Verification[A] = Verification[A]()) extends Verification[List[A]] {
   override def verify[B <: List[A]](value: B) = {
     val validations = value.map(verification.verify)
     if (validations.forall(_.isValid)) {
@@ -95,7 +95,7 @@ final class ListVerification[A](verification: Verification[A]) extends Verificat
   }
 }
 
-final class OptionVerification[A](verification: Verification[A]) extends Verification[Option[A]] {
+final class OptionVerification[A](verification: Verification[A] = Verification[A]()) extends Verification[Option[A]] {
   override def verify[B <: Option[A]](value: B) = {
     value
       .map {

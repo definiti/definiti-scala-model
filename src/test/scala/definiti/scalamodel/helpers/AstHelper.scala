@@ -7,6 +7,14 @@ object AstHelper {
     ClassVal(s"${name}Verification", s"Verification[${typ}]", CallMethod("Verification", "traverse"))
   }
 
+  def attributeVerificationDefinedType(name: String, typ: String): ClassVal = {
+    ClassVal(
+      name = s"${name}Verification",
+      typ = s"Verification[${typ}]",
+      body = CallMethod("Verification", "traverse", CallAttribute(SimpleExpression("my.MyFirstType"),"allVerifications"))
+    )
+  }
+
   def typeVerifications(typ: String): ClassVal = {
     typeVerifications(typ, typ)
   }

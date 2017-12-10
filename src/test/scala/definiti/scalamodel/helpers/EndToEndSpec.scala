@@ -8,35 +8,35 @@ import definiti.scalamodel.{Configuration, ScalaAST}
 import org.scalatest.{FlatSpec, Matchers}
 
 trait EndToEndSpec extends FlatSpec with Matchers {
-  def processDirectory(sample: String): Validated[ScalaAST.Root] = {
-    process(configurationDirectory(sample))
+  def processDirectory(sample: String, configuration: Configuration = ConfigurationMock()): Validated[ScalaAST.Root] = {
+    process(configurationDirectory(sample), configuration)
   }
 
   def configurationDirectory(sample: String): CoreConfiguration = {
-    ConfigurationMock(
+    CoreConfigurationMock(
       source = Paths.get(s"src/test/resources/samples/${sample.replaceAll("\\.", "/")}"),
       apiSource = Paths.get(s"src/main/resources/api"),
       contexts = Seq()
     )
   }
 
-  def processFile(sample: String): Validated[ScalaAST.Root] = {
-    process(configurationFile(sample))
+  def processFile(sample: String, configuration: Configuration = ConfigurationMock()): Validated[ScalaAST.Root] = {
+    process(configurationFile(sample), configuration)
   }
 
   def configurationFile(sample: String): CoreConfiguration = {
-    ConfigurationMock(
+    CoreConfigurationMock(
       source = Paths.get(s"src/test/resources/samples/${sample.replaceAll("\\.", "/")}.def"),
       apiSource = Paths.get(s"src/main/resources/api"),
       contexts = Seq()
     )
   }
 
-  private def process(configuration: CoreConfiguration): Validated[ScalaAST.Root] = {
-    val project = new Project(configuration)
+  private def process(coreConfiguration: CoreConfiguration, configuration: Configuration): Validated[ScalaAST.Root] = {
+    val project = new Project(coreConfiguration)
     project.generateStructureWithLibrary()
       .map { case (ast, library) =>
-        val builder = new ScalaModelBuilder(new Configuration(), library)
+        val builder = new ScalaModelBuilder(configuration, library)
         builder.build(ast)
       }
   }
