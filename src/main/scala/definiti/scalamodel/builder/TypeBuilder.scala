@@ -86,6 +86,7 @@ trait TypeBuilder {
 
   def verificationsFromTypeReference(typeReference: TypeReference): Seq[VerificationReference] = {
     library.types.get(typeReference.typeName)
+      .collect { case definedType: DefinedType => definedType }
       .toSeq
       .flatMap(verificationsFromType)
   }

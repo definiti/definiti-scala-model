@@ -1,16 +1,20 @@
 package definiti.scalamodel
 
-import definiti.core.ValidValue
-import definiti.scalamodel.ScalaAST._
+import definiti.scalamodel.ScalaAST.{ObjectDef, _}
+import definiti.scalamodel.helpers.AstHelper._
 import definiti.scalamodel.helpers.EndToEndSpec
 
 class SpecificSpec extends EndToEndSpec {
   import SpecificSpec._
 
   "The generator" should "force the usage of BigDecimal for all numbers" in {
-    val expected = ValidValue(numberToBigDecimalResult)
     val output = processFile("specific.numberToBigDecimal")
-    output should be(expected)
+    output should beValidRoot(numberToBigDecimalResult)
+  }
+
+  it should "use alias type verification and not duplicate them" in {
+    val output = processFile("specific.attributeAsAliasType")
+    output should beValidRoot(attributeAsAliasType)
   }
 }
 
@@ -36,6 +40,40 @@ object SpecificSpec {
             parameters = Seq(Parameter("acc", "BigDecimal"), Parameter("current", "BigDecimal")),
             body = BinaryOp("+", SimpleExpression("acc"), SimpleExpression("current"))
           )
+        )
+      )
+    )
+  )
+
+  val attributeAsAliasType: Root = Root(
+    Package(
+      "my",
+      verificationObject("IsRequired", "String", "This string is required", CallFunction("StringExtension.nonEmpty", SimpleExpression("string")), "string"),
+      CaseClassDef("MyType", Parameter("attribute", "String")),
+      ObjectDef(
+        name = "MyType",
+        body = Seq(
+          attributeVerificationAliasType("attribute", "my.RequiredString", "String"),
+          typeVerifications("MyType"),
+          allVerifications("MyType", "attribute"),
+          applyCheck("MyType", "attribute" -> "String")
+        )
+      ),
+      ObjectDef(
+        name = "RequiredString",
+        body = Seq(
+          ClassVal(
+            name = "RequiredStringVerifications",
+            typ = "Verification[String]",
+            body = Seq(
+              CallMethod(
+                target = SimpleExpression("Verification"),
+                name = "traverse",
+                arguments = Seq(CallFunction("my.IsRequired"))
+              )
+            )
+          ),
+          aliasApplyCheck("RequiredString", "String")
         )
       )
     )

@@ -7,7 +7,7 @@ import definiti.scalamodel.builder.ScalaModelBuilder
 import definiti.scalamodel.{Configuration, ScalaAST}
 import org.scalatest.{FlatSpec, Matchers}
 
-trait EndToEndSpec extends FlatSpec with Matchers {
+trait EndToEndSpec extends FlatSpec with Matchers with ASTMatcher {
   def processDirectory(sample: String, configuration: Configuration = ConfigurationMock()): Validated[ScalaAST.Root] = {
     process(configurationDirectory(sample), configuration)
   }

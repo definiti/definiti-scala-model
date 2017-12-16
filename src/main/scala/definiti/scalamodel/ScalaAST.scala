@@ -38,6 +38,12 @@ object ScalaAST {
 
   case class ObjectDef(name: String, body: Seq[Statement]) extends Statement with PackageElement
 
+  object ObjectDef {
+    def apply(name: String, statements: Statement*)(implicit dummyImplicit: DummyImplicit): ObjectDef = {
+      ObjectDef(name, statements)
+    }
+  }
+
   case class CaseClassDef(
     name: String,
     parameters: Seq[Parameter],

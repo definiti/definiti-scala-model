@@ -1,6 +1,7 @@
 package definiti.scalamodel.helpers
 
 import definiti.scalamodel.ScalaAST._
+import definiti.scalamodel.utils.StringUtils
 
 object AstHelper {
   def attributeVerification(name: String, typ: String): ClassVal = {
@@ -11,7 +12,15 @@ object AstHelper {
     ClassVal(
       name = s"${name}Verification",
       typ = s"Verification[${typ}]",
-      body = CallMethod("Verification", "traverse", CallAttribute(SimpleExpression("my.MyFirstType"),"allVerifications"))
+      body = CallMethod("Verification", "traverse", CallAttribute(SimpleExpression(typ),"allVerifications"))
+    )
+  }
+
+  def attributeVerificationAliasType(name: String, typ: String, realType: String): ClassVal = {
+    ClassVal(
+      name = s"${name}Verification",
+      typ = s"Verification[${realType}]",
+      body = CallMethod("Verification", "traverse", CallAttribute(SimpleExpression(typ), s"${StringUtils.lastPart(typ, '.')}Verifications"))
     )
   }
 
@@ -83,7 +92,7 @@ object AstHelper {
     )
   }
 
-  def verificationObject(name: String, typ: String, message: String, body: Expression): ObjectDef = {
+  def verificationObject(name: String, typ: String, message: String, body: Expression, attributeName: String = "x"): ObjectDef = {
     ObjectDef(
       name = name,
       body = Seq(
@@ -99,7 +108,7 @@ object AstHelper {
             ),
             arguments = Seq(
               Lambda(
-                parameters = Seq(Parameter("x", typ)),
+                parameters = Seq(Parameter(attributeName, typ)),
                 body = body
               )
             )

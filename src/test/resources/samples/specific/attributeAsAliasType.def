@@ -1,0 +1,14 @@
+package my
+
+type MyType {
+  attribute: RequiredString
+}
+
+type RequiredString = String verifying IsRequired
+
+verification IsRequired {
+  "This string is required"
+  (string: String) => {
+    string.nonEmpty()
+  }
+}
