@@ -3,8 +3,6 @@ package definiti.native
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
-import my.person.Person
-import my.person.Person.allVerifications
 import spray.json.{DefaultJsonProtocol, JsString, JsValue, JsonFormat, RootJsonFormat, deserializationError}
 
 object JsonSpraySupport extends DefaultJsonProtocol {

@@ -23,7 +23,7 @@ trait ExpressionBuilder {
     case boolean: BooleanValue =>
       ScalaAST.SimpleExpression(boolean.value.toString)
     case number: NumberValue =>
-      ScalaAST.SimpleExpression(number.value.toString)
+      ScalaAST.CallFunction("BigDecimal", ScalaAST.SimpleExpression(number.value.toString))
     case quotedString: QuotedStringValue =>
       ScalaAST.SimpleExpression('"' + quotedString.value.replaceAllLiterally("\\", "\\\\") + '"')
     case reference: Reference =>

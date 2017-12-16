@@ -1,0 +1,9 @@
+package numbers
+
+def twice(n: Number): Number => {
+  n + n
+}
+
+def sum(values: List[Number]): Number => {
+  values.foldLeft(0, (acc: Number, current: Number) => {acc + current})
+}
