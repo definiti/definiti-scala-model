@@ -2,6 +2,7 @@ package definiti.scalamodel.builder
 
 import definiti.core.ast._
 import definiti.scalamodel.ScalaAST
+import definiti.scalamodel.utils.StringUtils
 
 trait ExpressionBuilder {
   self: ScalaModelBuilder =>
@@ -27,7 +28,10 @@ trait ExpressionBuilder {
     case quotedString: QuotedStringValue =>
       ScalaAST.SimpleExpression('"' + quotedString.value.replaceAllLiterally("\\", "\\\\") + '"')
     case reference: Reference =>
-      ScalaAST.SimpleExpression(reference.name)
+      reference.returnType match {
+        case NamedFunctionReference(functionName) => ScalaAST.SimpleExpression(StringUtils.lastPart(functionName))
+        case _ => ScalaAST.SimpleExpression(reference.name)
+      }
     case methodCall: MethodCall =>
       generateMethodCall(methodCall)
     case attributeCall: AttributeCall =>
@@ -52,7 +56,7 @@ trait ExpressionBuilder {
       )
     case not: Not => ScalaAST.UnaryOp("!", generateExpression(not.inner))
     case functionCall: FunctionCall =>
-      ScalaAST.CallFunction(ScalaAST.SimpleExpression(functionCall.name), functionCall.parameters.map(generateExpression))
+      ScalaAST.CallFunction(ScalaAST.SimpleExpression(StringUtils.lastPart(functionCall.name)), functionCall.parameters.map(generateExpression))
     case lambda: LambdaExpression =>
       ScalaAST.Lambda(lambda.parameterList.map(generateParameter), generateExpression(lambda.expression))
   }

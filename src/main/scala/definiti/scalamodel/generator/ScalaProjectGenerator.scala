@@ -12,25 +12,28 @@ class ScalaProjectGenerator(config: Configuration) {
   }
 
   def generateProject(root: ScalaAST.Root): Seq[ScalaAST.ScalaFile] = {
-    generatePackageChildren(root.elements) ++ generatePackageFile("root", root.elements)
+    generatePackageChildren(root.elements) ++ generatePackageFile(ScalaAST.Package("root", Seq.empty, root.elements))
   }
 
   private def generatePackage(aPackage: ScalaAST.Package): Seq[ScalaAST.ScalaFile] = {
-    generatePackageChildren(aPackage.elements) ++ generatePackageFile(aPackage.name, aPackage.elements)
+    generatePackageChildren(aPackage.elements) ++ generatePackageFile(aPackage)
   }
 
-  private def generatePackageFile(packageName: String, packageElements: Seq[ScalaAST.PackageElement]): Option[ScalaAST.ScalaFile] = {
-    if (packageElements.exists(_.isInstanceOf[ScalaAST.Statement])) {
-      val finalPackageName = StringUtils.excludeLastPart(packageName, '.')
+  private def generatePackageFile(aPackage: ScalaAST.Package): Option[ScalaAST.ScalaFile] = {
+    if (aPackage.elements.exists(_.isInstanceOf[ScalaAST.Statement])) {
+      val finalPackageName = StringUtils.excludeLastPart(aPackage.name, '.')
       val packageStatement = Some(finalPackageName).filter(_.nonEmpty).map(ScalaAST.PackageDeclaration)
       Some(buildScalaFile(
-        packageName,
+        aPackage.name,
         ScalaCodeGenerator(
           ScalaAST.StatementsGroup(packageStatement)
+            .plus(ScalaAST.Blank)
             .plus(importLines)
+            .plus(aPackage.imports)
+            .plus(ScalaAST.Blank)
             .plus(ScalaAST.PackageDef(
-              name = StringUtils.lastPart(packageName, '.'),
-              body = packageElements.collect { case statement: ScalaAST.Statement => statement }
+              name = StringUtils.lastPart(aPackage.name, '.'),
+              body = aPackage.elements.collect { case statement: ScalaAST.Statement => statement }
             ))
         )
       ))

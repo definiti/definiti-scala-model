@@ -3,6 +3,7 @@ package definiti.scalamodel.builder
 import definiti.core.ast._
 import definiti.scalamodel.ScalaAST
 import definiti.scalamodel.ScalaAST.Expression
+import definiti.scalamodel.utils.StringUtils
 
 trait ClassDefinitionBuilder {
   self: ScalaModelBuilder =>
@@ -78,9 +79,9 @@ trait ClassDefinitionBuilder {
   private def generateTypeVerificationCall(typeReference: TypeReference): Option[ScalaAST.Expression] = {
     library.types.get(typeReference.typeName) match {
       case Some(aliasType: AliasType) =>
-        Some(ScalaAST.CallAttribute(ScalaAST.SimpleExpression(typeReference.typeName), s"${aliasType.name}Verifications${generateGenericTypes(typeReference.genericTypes)}"))
+        Some(ScalaAST.CallAttribute(ScalaAST.SimpleExpression(StringUtils.lastPart(typeReference.typeName)), s"${StringUtils.lastPart(aliasType.name)}Verifications${generateGenericTypes(typeReference.genericTypes)}"))
       case Some(_: DefinedType) =>
-        Some(ScalaAST.CallAttribute(ScalaAST.SimpleExpression(typeReference.typeName), s"allVerifications${generateGenericTypes(typeReference.genericTypes)}"))
+        Some(ScalaAST.CallAttribute(ScalaAST.SimpleExpression(StringUtils.lastPart(typeReference.typeName)), s"allVerifications${generateGenericTypes(typeReference.genericTypes)}"))
       case _ => None
     }
   }
@@ -91,7 +92,7 @@ trait ClassDefinitionBuilder {
 
   private def generateVerificationCall(verificationReference: VerificationReference, generics: String): ScalaAST.Expression = {
     ScalaAST.CallFunction(
-      target = ScalaAST.SimpleExpression(s"${verificationReference.verificationName}${generics}"),
+      target = ScalaAST.SimpleExpression(s"${StringUtils.lastPart(verificationReference.verificationName)}${generics}"),
       arguments = verificationReference.message.map(ScalaAST.StringExpression).toSeq
     )
   }

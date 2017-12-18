@@ -77,6 +77,7 @@ object NominalSpec {
   val packageAliasType: Root = Root(
     Package(
       "tst",
+      Seq.empty,
       ObjectDef(
         name = "AliasString",
         body = Seq(

@@ -35,9 +35,10 @@ object SprayJsonSpec {
     Root(
       Package(
         "my",
+        Seq.empty,
         CaseClassDef("MyFirstType", Parameter("myAttribute", "String")),
         firstDefinedTypeObject(validation),
-        CaseClassDef("MySecondType", Parameter("myFirstAttribute", "BigDecimal"), Parameter("mySecondAttribute", "my.MyFirstType")),
+        CaseClassDef("MySecondType", Parameter("myFirstAttribute", "BigDecimal"), Parameter("mySecondAttribute", "MyFirstType")),
         secondDefinedTypeObject(validation)
       )
     )
@@ -96,10 +97,10 @@ object SprayJsonSpec {
       name = "MySecondType",
       body = Seq(
         attributeVerification("myFirstAttribute", "BigDecimal"),
-        attributeVerificationDefinedType("mySecondAttribute", "my.MyFirstType"),
+        attributeVerificationDefinedType("mySecondAttribute", "MyFirstType"),
         typeVerifications("MySecondType"),
         allVerifications("MySecondType", "myFirstAttribute", "mySecondAttribute"),
-        applyCheck("MySecondType", "myFirstAttribute" -> "BigDecimal", "mySecondAttribute" -> "my.MyFirstType")
+        applyCheck("MySecondType", "myFirstAttribute" -> "BigDecimal", "mySecondAttribute" -> "MyFirstType")
       ) ++ secondDefinedTypeJson(validation)
     )
   }

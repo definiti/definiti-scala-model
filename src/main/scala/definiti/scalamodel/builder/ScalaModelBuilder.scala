@@ -7,6 +7,7 @@ class ScalaModelBuilder(val config: Configuration, val library: Library)
   extends CommonBuilder
     with ClassDefinitionBuilder
     with ExpressionBuilder
+    with ImportExtractor
     with JsonBuilder
     with NamedFunctionBuilder
     with PackageBuilder
@@ -35,6 +36,7 @@ class ScalaModelBuilder(val config: Configuration, val library: Library)
     }
     ScalaAST.Package(
       namespace.fullName,
+      imports = extractImportsFromNamespace(namespace),
       elements = directElements ++ packageElements
     )
   }

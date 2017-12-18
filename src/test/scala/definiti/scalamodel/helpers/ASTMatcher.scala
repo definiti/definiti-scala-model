@@ -55,7 +55,7 @@ trait ASTMatcher {
     }
 
     private def printPackageElement(packageElement: PackageElement, indent: String): String = packageElement match {
-      case Package(name, elements) =>
+      case Package(name, _, elements) =>
         s"""package ${name} {
            |${elements.map(printPackageElement(_, ScalaCodeGenerator.inc(indent)))}
            |}

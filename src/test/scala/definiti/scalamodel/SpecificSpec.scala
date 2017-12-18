@@ -22,6 +22,7 @@ object SpecificSpec {
   val numberToBigDecimalResult: Root = Root(
     Package(
       "numbers",
+      Seq.empty,
       Def1(
         name = "twice",
         typ = "BigDecimal",
@@ -48,12 +49,13 @@ object SpecificSpec {
   val attributeAsAliasType: Root = Root(
     Package(
       "my",
+      Seq.empty,
       verificationObject("IsRequired", "String", "This string is required", CallFunction("StringExtension.nonEmpty", SimpleExpression("string")), "string"),
       CaseClassDef("MyType", Parameter("attribute", "String")),
       ObjectDef(
         name = "MyType",
         body = Seq(
-          attributeVerificationAliasType("attribute", "my.RequiredString", "String"),
+          attributeVerificationAliasType("attribute", "RequiredString", "String"),
           typeVerifications("MyType"),
           allVerifications("MyType", "attribute"),
           applyCheck("MyType", "attribute" -> "String")
@@ -65,7 +67,7 @@ object SpecificSpec {
           ClassVal(
             name = "RequiredStringVerifications",
             typ = "Verification[String]",
-            body = Seq(CallFunction("my.IsRequired"))
+            body = Seq(CallFunction("IsRequired"))
           ),
           aliasApplyCheck("RequiredString", "String")
         )

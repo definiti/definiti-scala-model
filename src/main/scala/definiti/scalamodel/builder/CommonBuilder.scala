@@ -6,8 +6,14 @@ trait CommonBuilder {
   self: ScalaModelBuilder =>
 
   val nativeTypeMapping = Map(
+    "Any" -> "Any",
+    "Boolean" -> "Boolean",
+    "Date" -> "LocalDateTime",
+    "List" -> "List",
     "Number" -> "BigDecimal",
-    "Date" -> "LocalDateTime"
+    "Option" -> "Option",
+    "String" -> "String",
+    "Unit" -> "Unit"
   )
 
   def verificationsFromNamespace(namespace: Namespace): Seq[Verification] = {
