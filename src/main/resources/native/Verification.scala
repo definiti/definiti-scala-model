@@ -1,7 +1,9 @@
 package definiti.native
 
 sealed trait Verification[A] {
-  def verify[B <: A](value: B): Validation[B]
+  final def verify[B <: A](value: B): Validation[B] = validate("", value)
+
+  private[native] def validate[B <: A](path: String, value: B): Validation[B]
 
   def andThen(message: String)(check: A => Boolean): Verification[A] = {
     new VerificationGroup[A](Seq(this, new ValueVerification[A](check, message)))
@@ -17,8 +19,8 @@ sealed trait Verification[A] {
 
   def withMessage(message: String): Verification[A] = this
 
-  def from[B](f: B => A): Verification[B] = {
-    new VerificationMap[A, B](this, f)
+  def from[B](f: B => A, path: String): Verification[B] = {
+    new VerificationMap[A, B](this, f, path)
   }
 }
 
@@ -38,23 +40,20 @@ object Verification {
 }
 
 final class VerificationGroup[A](verifications: Seq[Verification[A]]) extends Verification[A] {
-  override def verify[B <: A](value: B) = {
-    val validations = verifications.map(_.verify(value))
+  override private[native] def validate[B <: A](path: String, value: B) = {
+    val validations = verifications.map(_.validate(path, value))
     if (validations.forall(_.isValid)) {
       Valid(value)
     } else {
-      Invalid {
-        validations.collect {
-          case Invalid(errors) => errors
-        }.flatten
-      }
+      Validation.squashErrors(validations)
     }
   }
 }
 
-final class VerificationMap[A, C](verification: Verification[A], map: C => A) extends Verification[C] {
-  override def verify[B <: C](value: B): Validation[B] = {
-    verification.verify(map(value)) match {
+final class VerificationMap[A, C](verification: Verification[A], map: C => A, subPath: String) extends Verification[C] {
+  override private[native] def validate[B <: C](path: String, value: B): Validation[B] = {
+    val innerPath = if (path.nonEmpty) path + "." + subPath else subPath
+    verification.validate(innerPath, map(value)) match {
       case Valid(_) => Valid(value)
       case Invalid(errors) => Invalid(errors)
     }
@@ -62,15 +61,15 @@ final class VerificationMap[A, C](verification: Verification[A], map: C => A) ex
 }
 
 final class NoVerification[A] extends Verification[A] {
-  override def verify[B <: A](value: B): Validation[B] = Valid(value)
+  override private[native] def validate[B <: A](path: String, value: B): Validation[B] = Valid(value)
 }
 
 final class ValueVerification[A](check: A => Boolean, message: String) extends Verification[A] {
-  override def verify[B <: A](value: B): Validation[B] = {
+  override private[native] def validate[B <: A](path: String, value: B): Validation[B] = {
     if (check(value)) {
       Valid(value)
     } else {
-      Invalid(message)
+      Invalid(Error(path, message))
     }
   }
 
@@ -78,24 +77,22 @@ final class ValueVerification[A](check: A => Boolean, message: String) extends V
 }
 
 final class ListVerification[A](verification: Verification[A] = Verification[A]()) extends Verification[List[A]] {
-  override def verify[B <: List[A]](value: B) = {
-    val validations = value.map(verification.verify)
+  override private[native] def validate[B <: List[A]](path: String, value: B) = {
+    val validations = value.zipWithIndex.map {
+      case (current, index) => verification.validate(path + s"[${index}]", current)
+    }
     if (validations.forall(_.isValid)) {
       Valid(value)
     } else {
-      Invalid {
-        validations.collect {
-          case Invalid(errors) => errors
-        }.flatten
-      }
+      Validation.squashErrors(validations)
     }
   }
 }
 
 final class OptionVerification[A](verification: Verification[A] = Verification[A]()) extends Verification[Option[A]] {
-  override def verify[B <: Option[A]](value: B) = {
+  override private[native] def validate[B <: Option[A]](path: String, value: B) = {
     value
-      .map(verification.verify)
+      .map(verification.validate(path, _))
       .map {
         case Valid(_) => Valid(value)
         case Invalid(errors) => Invalid(errors)

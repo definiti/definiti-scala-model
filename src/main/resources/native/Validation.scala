@@ -10,6 +10,19 @@ sealed trait Validation[+A] {
   def andThen[B](f: => Validation[B]): Validation[B]
 }
 
+object Validation {
+  def squashErrors(validations: Seq[Validation[_]]): Invalid = {
+    Invalid {
+      validations
+        .collect { case Invalid(errors) => errors }
+        .flatten
+        .groupBy(_.path)
+        .map { case (errorPath, errors) => Error(errorPath, errors.flatMap(_.messages)) }
+        .toSeq
+    }
+  }
+}
+
 case class Valid[+A](value: A) extends Validation[A] {
   override def isValid: Boolean = true
 
@@ -20,7 +33,7 @@ case class Valid[+A](value: A) extends Validation[A] {
   override def andThen[B](f: => Validation[B]): Validation[B] = f
 }
 
-case class Invalid(errors: Seq[String]) extends Validation[Nothing] {
+case class Invalid(errors: Seq[Error]) extends Validation[Nothing] {
   override def isValid: Boolean = false
 
   override def map[B](f: (Nothing) => B): Validation[B] = Invalid(errors)
@@ -31,5 +44,17 @@ case class Invalid(errors: Seq[String]) extends Validation[Nothing] {
 }
 
 object Invalid {
-  def apply(errors: String*)(implicit dummyImplicit: DummyImplicit): Invalid = new Invalid(errors)
+  def apply(errors: Error*)(implicit dummyImplicit: DummyImplicit): Invalid = new Invalid(errors)
+
+  def apply(path: String, messages: String*): Invalid = Invalid(Error(path, messages))
+
+  def root(messages: Seq[String]): Invalid = Invalid(Error("", messages))
+
+  def root(messages: String*)(implicit dummyImplicit: DummyImplicit): Invalid = root(messages)
+}
+
+case class Error(path: String, messages: Seq[String])
+
+object Error {
+  def apply(path: String, messages: String*)(implicit dummyImplicit: DummyImplicit): Error = new Error(path, messages)
 }

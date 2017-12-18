@@ -29,7 +29,7 @@ object JsonPlaySupport {
       defaultFormat.reads(json).flatMap { value =>
         verification.verify(value) match {
           case Valid(value) => JsSuccess(value)
-          case Invalid(errors) => JsError(Seq(JsPath() -> Seq(JsonValidationError(errors))))
+          case Invalid(errors) => JsError(Seq(JsPath() -> Seq(JsonValidationError(errors.flatMap(_.messages)))))
         }
       }
     }

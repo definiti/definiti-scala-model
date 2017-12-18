@@ -49,8 +49,8 @@ class ValidationSpec extends FlatSpec with Matchers with PropertyChecks {
     } yield (n, message)
 
     forAll(cases) { case (n, message) =>
-      val result = Valid(n).flatMap(x => Invalid(s"${x} ${message}"))
-      result should ===(Invalid(s"${n} ${message}"))
+      val result = Valid(n).flatMap(x => Invalid.root(s"${x} ${message}"))
+      result should ===(Invalid.root(s"${n} ${message}"))
     }
   }
 
@@ -62,9 +62,9 @@ class ValidationSpec extends FlatSpec with Matchers with PropertyChecks {
 
     forAll(cases) { case (n, message) =>
       val result = Valid(n)
-        .flatMap[Int](x => Invalid(s"${x} ${message}"))
+        .flatMap[Int](x => Invalid.root(s"${x} ${message}"))
         .map(x => x * x)
-      result should ===(Invalid(s"${n} ${message}"))
+      result should ===(Invalid.root(s"${n} ${message}"))
     }
   }
 
@@ -76,9 +76,9 @@ class ValidationSpec extends FlatSpec with Matchers with PropertyChecks {
 
     forAll(cases) { case (n, message) =>
       val result = Valid(n)
-        .flatMap[Int](x => Invalid(s"${x} ${message}"))
+        .flatMap[Int](x => Invalid.root(s"${x} ${message}"))
         .flatMap(x => Valid(x * x))
-      result should ===(Invalid(s"${n} ${message}"))
+      result should ===(Invalid.root(s"${n} ${message}"))
     }
   }
 
@@ -96,21 +96,21 @@ class ValidationSpec extends FlatSpec with Matchers with PropertyChecks {
     } yield (n, message)
 
     forAll(cases) { case (n, message) =>
-      val result = Valid(n).andThen(Invalid(message))
-      result should ===(Invalid(message))
+      val result = Valid(n).andThen(Invalid.root(message))
+      result should ===(Invalid.root(message))
     }
   }
 
   "Invalid.isValid" should "return false" in {
     forAll(Generators.anyString) { message =>
-      Invalid(message).isValid should ===(false)
+      Invalid.root(message).isValid should ===(false)
     }
   }
 
   "Invalid.map" should "be a Invalid with the same error" in {
     forAll(Generators.anyString) { message =>
       val result = invalid[Int](message).map(x => x + x)
-      result should ===(Invalid(message))
+      result should ===(Invalid.root(message))
     }
   }
 
@@ -119,14 +119,14 @@ class ValidationSpec extends FlatSpec with Matchers with PropertyChecks {
       val result = invalid[Int](message)
         .map(x => x + x)
         .map(x => x * x)
-      result should ===(Invalid(message))
+      result should ===(Invalid.root(message))
     }
   }
 
   "Invalid.flatMap" should "be the initial Invalid value" in {
     forAll(Generators.anyString) { message =>
       val result = invalid[Int](message).flatMap(x => Valid(x + x))
-      result should ===(Invalid(message))
+      result should ===(Invalid.root(message))
     }
   }
 
@@ -135,7 +135,7 @@ class ValidationSpec extends FlatSpec with Matchers with PropertyChecks {
       val result = invalid[Int](message)
         .flatMap(x => Valid(x + x))
         .flatMap(x => Valid(x * x))
-      result should ===(Invalid(message))
+      result should ===(Invalid.root(message))
     }
   }
 
@@ -145,8 +145,8 @@ class ValidationSpec extends FlatSpec with Matchers with PropertyChecks {
       otherMessage <- Generators.anyString
     } yield (messages, otherMessage)
     forAll(cases) { case (message, otherMessage) =>
-      val result = invalid[Int](message).flatMap(x => Invalid(s"${x} ${otherMessage}"))
-      result should ===(Invalid(message))
+      val result = invalid[Int](message).flatMap(x => Invalid.root(s"${x} ${otherMessage}"))
+      result should ===(Invalid.root(message))
     }
   }
 
@@ -156,17 +156,17 @@ class ValidationSpec extends FlatSpec with Matchers with PropertyChecks {
       otherMessage <- Generators.anyString
     } yield (messages, otherMessage)
     forAll(cases) { case (message, otherMessage) =>
-      val result = Invalid(message).andThen(Invalid(otherMessage))
-      result should ===(Invalid(message))
+      val result = Invalid.root(message).andThen(Invalid.root(otherMessage))
+      result should ===(Invalid.root(message))
     }
   }
 
   it should "not be changed into a valid value" in {
     forAll(Generators.anyString) { message =>
-      val result = Invalid(message).andThen(Valid(1))
-      result should ===(Invalid(message))
+      val result = Invalid.root(message).andThen(Valid(1))
+      result should ===(Invalid.root(message))
     }
   }
 
-  private def invalid[A](errorMessage: String): Validation[A] = Invalid(errorMessage)
+  private def invalid[A](errorMessage: String): Validation[A] = Invalid.root(errorMessage)
 }
