@@ -25,16 +25,16 @@ sealed trait Verification[A] {
 }
 
 object Verification {
-  def apply[A](): Verification[A] = new NoVerification[A]
-
   def apply[A](message: String)(check: A => Boolean): Verification[A] = {
     new ValueVerification(check, message)
   }
 
-  def traverse[A](verifications: Verification[A]*)(implicit dummyImplicit: DummyImplicit): Verification[A] = {
-    traverse(verifications)
+  def none[A]: Verification[A] = new NoVerification[A]
+
+  def all[A](verifications: Verification[A]*)(implicit dummyImplicit: DummyImplicit): Verification[A] = {
+    all(verifications)
   }
-  def traverse[A](verifications: Seq[Verification[A]]): Verification[A] = {
+  def all[A](verifications: Seq[Verification[A]]): Verification[A] = {
     new VerificationGroup(verifications)
   }
 }
@@ -76,7 +76,7 @@ final class ValueVerification[A](check: A => Boolean, message: String) extends V
   override def withMessage(message: String) = new ValueVerification(check, message)
 }
 
-final class ListVerification[A](verification: Verification[A] = Verification[A]()) extends Verification[List[A]] {
+final class ListVerification[A](verification: Verification[A] = Verification.none[A]) extends Verification[List[A]] {
   override private[native] def validate[B <: List[A]](path: String, value: B) = {
     val validations = value.zipWithIndex.map {
       case (current, index) => verification.validate(path + s"[${index}]", current)
@@ -89,7 +89,7 @@ final class ListVerification[A](verification: Verification[A] = Verification[A](
   }
 }
 
-final class OptionVerification[A](verification: Verification[A] = Verification[A]()) extends Verification[Option[A]] {
+final class OptionVerification[A](verification: Verification[A] = Verification.none[A]) extends Verification[Option[A]] {
   override private[native] def validate[B <: Option[A]](path: String, value: B) = {
     value
       .map(verification.validate(path, _))

@@ -5,14 +5,14 @@ import definiti.scalamodel.utils.StringUtils
 
 object AstHelper {
   def attributeVerification(name: String, typ: String): ClassVal = {
-    ClassVal(s"${name}Verification", s"Verification[${typ}]", CallMethod("Verification", "traverse"))
+    ClassVal(s"${name}Verification", s"Verification[${typ}]", SimpleExpression(s"Verification.none[${typ}]"))
   }
 
   def attributeVerificationDefinedType(name: String, typ: String): ClassVal = {
     ClassVal(
       name = s"${name}Verification",
       typ = s"Verification[${typ}]",
-      body = CallMethod("Verification", "traverse", CallAttribute(SimpleExpression(typ),"allVerifications"))
+      body = CallAttribute(SimpleExpression(typ), "allVerifications")
     )
   }
 
@@ -20,7 +20,7 @@ object AstHelper {
     ClassVal(
       name = s"${name}Verification",
       typ = s"Verification[${realType}]",
-      body = CallMethod("Verification", "traverse", CallAttribute(SimpleExpression(typ), s"${StringUtils.lastPart(typ, '.')}Verifications"))
+      body = CallAttribute(SimpleExpression(typ), s"${StringUtils.lastPart(typ, '.')}Verifications")
     )
   }
 
@@ -29,10 +29,35 @@ object AstHelper {
   }
 
   def typeVerifications(typ: String, realType: String): ClassVal = {
-    ClassVal(s"${typ}Verifications", s"Verification[${realType}]", CallMethod("Verification", "traverse"))
+    ClassVal(s"${typ}Verifications", s"Verification[${realType}]", SimpleExpression(s"Verification.none[${realType}]"))
   }
 
-  def allVerifications(typ: String, attributes: String*): ClassVal = {
+  def allVerifications(typ: String, attribute: String): ClassVal = {
+    ClassVal(
+      name = "allVerifications",
+      typ = s"Verification[${typ}]",
+      body = Seq(
+        CallMethod(
+          target = CallMethod(
+            target = SimpleExpression(s"${attribute}Verification"),
+            name = "from",
+            arguments = Seq(
+              Lambda(
+                parameters = Seq(Parameter("x", typ)),
+                body = CallAttribute(SimpleExpression("x"), attribute)
+              ),
+              StringExpression(attribute)
+            )
+          ),
+          name = "andThen",
+          arguments = Seq(SimpleExpression(s"${typ}Verifications"))
+        )
+      )
+    )
+  }
+
+  def allVerifications(typ: String, firstAttribute: String, otherAttributes: String*): ClassVal = {
+    val attributes = firstAttribute +: otherAttributes
     ClassVal(
       name = "allVerifications",
       typ = s"Verification[${typ}]",
@@ -40,7 +65,7 @@ object AstHelper {
         CallMethod(
           target = CallMethod(
             target = SimpleExpression("Verification"),
-            name = "traverse",
+            name = "all",
             arguments = attributes.map { attribute =>
               CallMethod(
                 target = SimpleExpression(s"${attribute}Verification"),

@@ -126,11 +126,11 @@ object VerificationSeasonSamplesSpec {
       activities: List[String] => activities.nonEmpty
     }
 
-    val activitiesVerification = Verification.traverse(new ListVerification[String](nonEmptyActivityVerification), atLeastOneActivityVerification)
+    val activitiesVerification = Verification.all(new ListVerification[String](nonEmptyActivityVerification), atLeastOneActivityVerification)
 
     val optionsVerification = new ListVerification[SeasonOption](SeasonOption.seasonOptionVerification)
 
-    val seasonVerification = Verification.traverse(
+    val seasonVerification = Verification.all(
       Period.periodVerification.from((x: Season) => x.period, "period"),
       activitiesVerification.from((x: Season) => x.activities, "activities"),
       optionsVerification.from((x: Season) => x.options, "options")
@@ -154,7 +154,7 @@ object VerificationSeasonSamplesSpec {
       name: String => name.nonEmpty
     }
 
-    val seasonOptionVerification = Verification.traverse(nameVerification.from((x: SeasonOption) => x.name, "name"))
+    val seasonOptionVerification = Verification.all(nameVerification.from((x: SeasonOption) => x.name, "name"))
   }
 
   val atLeastOneEmptyActivityGen = for {

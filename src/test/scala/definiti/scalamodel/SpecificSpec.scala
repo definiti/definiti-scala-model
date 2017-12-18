@@ -65,13 +65,7 @@ object SpecificSpec {
           ClassVal(
             name = "RequiredStringVerifications",
             typ = "Verification[String]",
-            body = Seq(
-              CallMethod(
-                target = SimpleExpression("Verification"),
-                name = "traverse",
-                arguments = Seq(CallFunction("my.IsRequired"))
-              )
-            )
+            body = Seq(CallFunction("my.IsRequired"))
           ),
           aliasApplyCheck("RequiredString", "String")
         )
