@@ -11,49 +11,15 @@ sealed trait Validation[+A] {
 }
 
 object Validation {
-  def apply[A, B](fa: => Validation[A])(map: A => B)(verify: B => Boolean): Validation[B] = {
-    fa match {
-      case Valid(va) =>
-        val vb = map(va)
-        if (verify(vb)) {
-          Valid(vb)
-        } else {
-          Invalid()
-        }
+  def squashErrors(validations: Seq[Validation[_]]): Invalid = {
+    Invalid {
+      validations
+        .collect { case Invalid(errors) => errors }
+        .flatten
+        .groupBy(_.path)
+        .map { case (errorPath, errors) => Error(errorPath, errors.flatMap(_.messages)) }
+        .toSeq
     }
-  }
-
-  type V[A] = Validation[A]
-
-  def all[A, B](va: V[A], vb: V[B]): V[(A, B)] = {
-    (va, vb) match {
-      case (Valid(a), Valid(b)) => Valid((a, b))
-      case _ => Invalid(collectErrors(va, vb))
-    }
-  }
-  def all[A, B, C](va: V[A], vb: V[B], vc: V[C]): V[(A, B, C)] = {
-    (va, vb, vc) match {
-      case (Valid(a), Valid(b), Valid(c)) => Valid((a, b, c))
-      case _ => Invalid(collectErrors(va, vb, vc))
-    }
-  }
-  def all[A, B, C, D](va: V[A], vb: V[B], vc: V[C], vd: V[D]): V[(A, B, C, D)] = {
-    (va, vb, vc, vd) match {
-      case (Valid(a), Valid(b), Valid(c), Valid(d)) => Valid((a, b, c, d))
-      case _ => Invalid(collectErrors(va, vb, vc, vd))
-    }
-  }
-  def all[A, B, C, D, E](va: V[A], vb: V[B], vc: V[C], vd: V[D], ve: V[E]): V[(A, B, C, D, E)] = {
-    (va, vb, vc, vd, ve) match {
-      case (Valid(a), Valid(b), Valid(c), Valid(d), Valid(e)) => Valid((a, b, c, d, e))
-      case _ => Invalid(collectErrors(va, vb, vc, vd, ve))
-    }
-  }
-
-  def collectErrors(validations: Validation[_]*): Seq[String] = {
-    validations
-      .collect { case Invalid(errors) => errors }
-      .flatten
   }
 }
 
@@ -62,21 +28,33 @@ case class Valid[+A](value: A) extends Validation[A] {
 
   override def map[B](f: A => B): Validation[B] = Valid(f(value))
 
-  override def flatMap[B](f: A => Validation[B]) = f(value)
+  override def flatMap[B](f: A => Validation[B]): Validation[B] = f(value)
 
   override def andThen[B](f: => Validation[B]): Validation[B] = f
 }
 
-case class Invalid(errors: Seq[String]) extends Validation[Nothing] {
+case class Invalid(errors: Seq[Error]) extends Validation[Nothing] {
   override def isValid: Boolean = false
 
   override def map[B](f: (Nothing) => B): Validation[B] = Invalid(errors)
 
-  override def flatMap[B](f: Nothing => Validation[B]) = Invalid(errors)
+  override def flatMap[B](f: Nothing => Validation[B]): Validation[Nothing] = Invalid(errors)
 
   override def andThen[B](f: => Validation[B]): Validation[B] = Invalid(errors)
 }
 
 object Invalid {
-  def apply(errors: String*)(implicit dummyImplicit: DummyImplicit): Invalid = new Invalid(errors)
+  def apply(errors: Error*)(implicit dummyImplicit: DummyImplicit): Invalid = new Invalid(errors)
+
+  def apply(path: String, messages: String*): Invalid = Invalid(Error(path, messages))
+
+  def root(messages: Seq[String]): Invalid = Invalid(Error("", messages))
+
+  def root(messages: String*)(implicit dummyImplicit: DummyImplicit): Invalid = root(messages)
+}
+
+case class Error(path: String, messages: Seq[String])
+
+object Error {
+  def apply(path: String, messages: String*)(implicit dummyImplicit: DummyImplicit): Error = new Error(path, messages)
 }

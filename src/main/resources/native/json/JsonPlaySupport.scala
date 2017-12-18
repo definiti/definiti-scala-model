@@ -29,10 +29,30 @@ object JsonPlaySupport {
       defaultFormat.reads(json).flatMap { value =>
         verification.verify(value) match {
           case Valid(value) => JsSuccess(value)
-          case Invalid(errors) => JsError(Seq(JsPath() -> Seq(JsonValidationError(errors))))
+          case Invalid(errors) => JsError(
+            errors.map { error =>
+              pathToJsonPath(error.path) -> Seq(JsonValidationError(error.messages))
+            }
+          )
         }
       }
     }
     OFormat(reads, defaultFormat)
+  }
+
+  private def pathToJsonPath(path: String): JsPath = {
+    val normalizedPath = path
+      .replaceAll("\\]\\.", ".")
+      .replaceAll("\\[", ".")
+
+    val parts = normalizedPath.split("\\.")
+    val nodes = parts.map { part =>
+      try {
+        IdxPathNode(part.toInt)
+      } catch {
+        case _: Exception => KeyPathNode(part)
+      }
+    }
+    JsPath(nodes.toList)
   }
 }

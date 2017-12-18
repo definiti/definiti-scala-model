@@ -134,10 +134,13 @@ trait ClassDefinitionBuilder {
       ScalaAST.CallMethod(
         target = ScalaAST.SimpleExpression(s"${attribute.name}Verification"),
         name = "from",
-        arguments = Seq(ScalaAST.Lambda(
-          parameters = Seq(ScalaAST.Parameter("x", typ = s"${definedType.name}${generateGenerics(definedType.genericTypes)}")),
-          body = ScalaAST.CallAttribute(ScalaAST.SimpleExpression("x"), attribute.name)
-        ))
+        arguments = Seq(
+          ScalaAST.Lambda(
+            parameters = Seq(ScalaAST.Parameter("x", typ = s"${definedType.name}${generateGenerics(definedType.genericTypes)}")),
+            body = ScalaAST.CallAttribute(ScalaAST.SimpleExpression("x"), attribute.name)
+          ),
+          ScalaAST.StringExpression(attribute.name)
+        )
       )
     }
     generateDefOrVal(

@@ -3,7 +3,7 @@ package definiti.native
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
-import spray.json.{DefaultJsonProtocol, JsString, JsValue, JsonFormat, RootJsonFormat, deserializationError}
+import spray.json.{DefaultJsonProtocol, JsArray, JsObject, JsString, JsValue, JsonFormat, RootJsonFormat, deserializationError}
 
 object JsonSpraySupport extends DefaultJsonProtocol {
   private val datetimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
@@ -37,13 +37,25 @@ object JsonSpraySupport extends DefaultJsonProtocol {
     }
   }
 
+  case class ValidationDeserializationException(errors: Seq[Error]) extends RuntimeException {
+    override def getMessage: String = {
+      JsObject(
+        errors.map { error =>
+          error.path -> JsArray(error.messages.map(JsString(_)): _*)
+        }: _*
+      ).compactPrint
+    }
+
+    override def toString: String = getMessage
+  }
+
   def formatWithValidation[A](defaultFormat: RootJsonFormat[A], verification: Verification[A]): RootJsonFormat[A] = {
     new RootJsonFormat[A] {
       def write(obj: A): JsValue = defaultFormat.write(obj)
       def read(json: JsValue): A = {
         verification.verify(defaultFormat.read(json)) match {
           case Valid(value) => value
-          case Invalid(errors) => deserializationError(errors.mkString("\n"))
+          case Invalid(errors) => throw ValidationDeserializationException(errors)
         }
       }
     }
