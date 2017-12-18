@@ -49,7 +49,8 @@ object AstHelper {
                   Lambda(
                     parameters = Seq(Parameter("x", typ)),
                     body = CallAttribute(SimpleExpression("x"), attribute)
-                  )
+                  ),
+                  StringExpression(attribute)
                 )
               )
             }
