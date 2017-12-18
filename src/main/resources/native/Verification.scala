@@ -33,10 +33,7 @@ object Verification {
     traverse(verifications)
   }
   def traverse[A](verifications: Seq[Verification[A]]): Verification[A] = {
-    verifications.toList match {
-      case Nil => new NoVerification[A]
-      case head :: tail => head.andThen(traverse(tail))
-    }
+    new VerificationGroup(verifications)
   }
 }
 
@@ -98,6 +95,7 @@ final class ListVerification[A](verification: Verification[A] = Verification[A](
 final class OptionVerification[A](verification: Verification[A] = Verification[A]()) extends Verification[Option[A]] {
   override def verify[B <: Option[A]](value: B) = {
     value
+      .map(verification.verify)
       .map {
         case Valid(_) => Valid(value)
         case Invalid(errors) => Invalid(errors)

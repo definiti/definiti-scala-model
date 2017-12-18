@@ -18,8 +18,14 @@ libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.7.25"
 libraryDependencies += "com.github.pathikrit" %% "better-files" % "3.0.0"
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.1" % "test"
+libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.13.5" % "test"
+libraryDependencies += "com.47deg" %% "scalacheck-toolbox-datetime" % "0.2.3" % "test"
+
+libraryDependencies += "com.typesafe.play" %% "play-json" % "2.6.8" % "test"
 
 scalacOptions ++= Seq("-unchecked", "-deprecation", "-language:implicitConversions", "-feature")
+
+unmanagedSourceDirectories in Test += baseDirectory.value / "src" / "main" / "resources" / "native"
 
 useGpg := true
 
