@@ -38,7 +38,12 @@ object SprayJsonSpec {
         Seq.empty,
         CaseClassDef("MyFirstType", Parameter("myAttribute", "String")),
         firstDefinedTypeObject(validation),
-        CaseClassDef("MySecondType", Parameter("myFirstAttribute", "BigDecimal"), Parameter("mySecondAttribute", "MyFirstType")),
+        CaseClassDef(
+          "MySecondType",
+          Parameter("myFirstAttribute", "BigDecimal"),
+          Parameter("mySecondAttribute", "MyFirstType"),
+          Parameter("myThirdAttribute", "MyFirstType")
+        ),
         secondDefinedTypeObject(validation)
       )
     )
@@ -102,9 +107,10 @@ object SprayJsonSpec {
       body = Seq(
         attributeVerification("myFirstAttribute", "BigDecimal"),
         attributeVerificationDefinedType("mySecondAttribute", "MyFirstType"),
+        attributeVerificationDefinedType("myThirdAttribute", "MyFirstType"),
         typeVerifications("MySecondType"),
-        allVerifications("MySecondType", "myFirstAttribute", "mySecondAttribute"),
-        applyCheck("MySecondType", "myFirstAttribute" -> "BigDecimal", "mySecondAttribute" -> "MyFirstType")
+        allVerifications("MySecondType", "myFirstAttribute", "mySecondAttribute", "myThirdAttribute"),
+        applyCheck("MySecondType", "myFirstAttribute" -> "BigDecimal", "mySecondAttribute" -> "MyFirstType", "myThirdAttribute" -> "MyFirstType")
       ) ++ secondDefinedTypeJson(validation)
     )
   }
@@ -124,7 +130,7 @@ object SprayJsonSpec {
               isImplicit = true
             ),
             CallFunction(
-              target = "jsonFormat2",
+              target = "jsonFormat3",
               SimpleExpression(s"MySecondType.apply")
             )
           )
@@ -149,7 +155,7 @@ object SprayJsonSpec {
         ClassVal(
           name = s"MySecondTypeFormat",
           typ = s"RootJsonFormat[MySecondType]",
-          body = Seq(CallFunction(s"jsonFormat2", SimpleExpression(s"MySecondType.apply"))),
+          body = Seq(CallFunction(s"jsonFormat3", SimpleExpression(s"MySecondType.apply"))),
           isImplicit = true
         )
       )

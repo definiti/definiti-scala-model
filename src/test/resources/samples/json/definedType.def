@@ -7,4 +7,5 @@ type MyFirstType {
 type MySecondType {
   myFirstAttribute: Number
   mySecondAttribute: MyFirstType
+  myThirdAttribute: MyFirstType
 }

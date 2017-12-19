@@ -60,9 +60,11 @@ class SprayJsonBuilder(builder: ScalaModelBuilder) extends JsonBuilderStrategy {
   private def implicitAttributes(definedType: DefinedType): Seq[ScalaAST.Statement] = {
     definedType
       .attributes
-      .filterNot(attribute => builder.isNative(attribute.typeReference))
-      .map { attribute =>
-        val mainType = builder.generateMainType(attribute.typeReference)
+      .map(_.typeReference)
+      .filterNot(builder.isNative)
+      .map(builder.generateMainType)
+      .distinct
+      .map { mainType =>
         ScalaAST.Val(
           name = s"${mainType}Format",
           value = ScalaAST.CallAttribute(mainType, s"${mainType}RawFormat"),
@@ -125,9 +127,11 @@ class PlayJsonBuilder(builder: ScalaModelBuilder) extends JsonBuilderStrategy {
   private def implicitAttributes(definedType: DefinedType): Seq[ScalaAST.Statement] = {
     definedType
       .attributes
-      .filterNot(attribute => builder.isNative(attribute.typeReference))
-      .map { attribute =>
-        val mainType = builder.generateMainType(attribute.typeReference)
+      .map(_.typeReference)
+      .filterNot(builder.isNative)
+      .map(builder.generateMainType)
+      .distinct
+      .map { mainType =>
         ScalaAST.Val(
           name = s"${mainType}Format",
           value = ScalaAST.CallAttribute(mainType, s"${mainType}RawFormat"),
