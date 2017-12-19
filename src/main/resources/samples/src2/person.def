@@ -24,6 +24,10 @@ type Person {
 type Identity {
   firstName: RequiredNoun
   lastName: RequiredNoun
+  contact: Contact
+}
+
+type Contact {
   email: RequiredString
   phones: List[Phone]
 }

@@ -69,13 +69,6 @@ trait TypeBuilder {
     }
   }
 
-  def generateTag(aliasType: AliasType): ScalaAST.Statement = {
-    ScalaAST.StatementsGroup(
-      ScalaAST.TraitDef(s"${aliasType.name}Tag", Seq.empty, isSealed = true),
-      ScalaAST.TypeDef(aliasType.name, s"${generateType(aliasType.alias)} @@ ${aliasType.name}Tag")
-    )
-  }
-
   def generateGenericTypeDefinition(definedType: DefinedType): String = {
     if (definedType.genericTypes.nonEmpty) {
       definedType.genericTypes.mkString("[", ",", "]")
@@ -118,6 +111,14 @@ trait TypeBuilder {
       genericTypes.mkString("[", ",", "]")
     } else {
       ""
+    }
+  }
+
+  def isNative(typeReference: TypeReference): Boolean = {
+    library.types.get(typeReference.typeName).exists {
+      case _: NativeClassDefinition => true
+      case alias: AliasType => isNative(alias.alias)
+      case _ => false
     }
   }
 

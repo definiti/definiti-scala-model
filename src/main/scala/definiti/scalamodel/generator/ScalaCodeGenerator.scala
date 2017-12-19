@@ -1,7 +1,7 @@
 package definiti.scalamodel.generator
 
 import definiti.scalamodel.ScalaAST
-import definiti.scalamodel.ScalaAST.Expression
+import definiti.scalamodel.ScalaAST.{Expression, Statement}
 
 object ScalaCodeGenerator {
 
@@ -133,8 +133,11 @@ object ScalaCodeGenerator {
     ast.statements.map(a => generateStatement(a, indent)).mkString(s"\n$indent")
 
   def generateVal(ast: ScalaAST.Val, indent: String): String = {
-    val valType = if (ast.isLazy) "lazy val" else "val"
-    s"$valType ${ast.name} = ${generateExpression(ast.value, indent)}"
+    val properties = Seq(
+      if (ast.isImplicit) "implicit" else "",
+      if (ast.isLazy) "lazy" else ""
+    ).filter(_.nonEmpty).mkString(" ")
+    s"$properties val ${ast.name} = ${generateExpression(ast.value, indent)}"
   }
 
   def generateTraitDef(ast: ScalaAST.TraitDef, indent: String): String = {
@@ -171,16 +174,31 @@ object ScalaCodeGenerator {
        |$indent}""".stripMargin
 
   def generateClassVal(ast: ScalaAST.ClassVal, indent: String): String = {
-    val visibility = if (ast.isPrivate) "private" else ""
-    val implicitness = if (ast.isImplicit) "implicit" else ""
-    val lazyness = if (ast.isLazy) "lazy" else ""
-    val declaration = s"$visibility $implicitness $lazyness val ${ast.name}: ${ast.typ}".trim
-    val assignation = ast.body.map(a => generateStatement(a, inc(indent))).mkString(s"\n${inc(indent)}")
+    val properties = Seq(
+      if (ast.isPrivate) "private" else "",
+      if (ast.isImplicit) "implicit" else "",
+      if (ast.isLazy) "lazy" else ""
+    ).filter(_.nonEmpty).mkString(" ")
+    val declaration = s"$properties val ${ast.name}: ${ast.typ}".trim
+    val assignation = generateStatements(ast.body, indent)
     s"$declaration = $assignation"
   }
 
   def generateTypeDef(ast: ScalaAST.TypeDef, indent: String): String = {
     s"type ${ast.name} = ${ast.typ}"
+  }
+
+  def generateStatements(statements: Seq[Statement], indent: String): String = {
+    val innerIndent = inc(indent)
+    if (statements.isEmpty) {
+      "{}"
+    } else if (statements.lengthCompare(1) == 0) {
+      generateStatement(statements.head, innerIndent)
+    } else {
+      statements
+        .map(a => generateStatement(a, innerIndent))
+        .mkString(s"{\n${innerIndent}", s"\n${innerIndent}", s"\n${indent}}")
+    }
   }
 
   def generateStatement(ast: ScalaAST.Statement, indent: String): String = {
