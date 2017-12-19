@@ -132,6 +132,12 @@ object ScalaAST {
 
   case class New(name: String, arguments: Seq[Expression]) extends Expression
 
+  object New {
+    def apply(name: String, arguments: Expression*)(implicit dummyImplicit: DummyImplicit): New = {
+      new New(name, arguments)
+    }
+  }
+
   case class Comment(str: String) extends Statement with PackageElement
 
   case class Def0(

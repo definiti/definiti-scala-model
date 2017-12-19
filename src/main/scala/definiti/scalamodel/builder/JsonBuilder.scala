@@ -1,6 +1,6 @@
 package definiti.scalamodel.builder
 
-import definiti.core.ast.DefinedType
+import definiti.core.ast.{DefinedType, TypeReference}
 import definiti.scalamodel.{JsonFormat, ScalaAST}
 
 trait JsonBuilder {
@@ -27,7 +27,31 @@ trait JsonBuilderStrategy {
   def buildWithoutValidation(definedType: DefinedType): Seq[ScalaAST.Statement]
 }
 
-class SprayJsonBuilder(builder: ScalaModelBuilder) extends JsonBuilderStrategy {
+object JsonBuilderStrategy {
+  def extractUsedTypes(definedType: DefinedType, builder: ScalaModelBuilder): Seq[String] = {
+    definedType
+      .attributes
+      .map(_.typeReference)
+      .map(extractConcreteType)
+      .filterNot(builder.isNative)
+      .map(builder.generateMainType)
+      .distinct
+  }
+
+  private def extractConcreteType(typeReference: TypeReference): TypeReference = {
+    if (typeReference.typeName == "List" || typeReference.typeName == "Option") {
+      typeReference
+        .genericTypes
+        .headOption
+        .map(extractConcreteType)
+        .getOrElse(typeReference)
+    } else {
+      typeReference
+    }
+  }
+}
+
+class SprayJsonBuilder(val builder: ScalaModelBuilder) extends JsonBuilderStrategy {
   def buildWithValidation(definedType: DefinedType): Seq[ScalaAST.Statement] = {
     Seq(
       ScalaAST.Import("spray.json.RootJsonFormat"),
@@ -58,12 +82,7 @@ class SprayJsonBuilder(builder: ScalaModelBuilder) extends JsonBuilderStrategy {
   }
 
   private def implicitAttributes(definedType: DefinedType): Seq[ScalaAST.Statement] = {
-    definedType
-      .attributes
-      .map(_.typeReference)
-      .filterNot(builder.isNative)
-      .map(builder.generateMainType)
-      .distinct
+    JsonBuilderStrategy.extractUsedTypes(definedType, builder)
       .map { mainType =>
         ScalaAST.Val(
           name = s"${mainType}Format",
@@ -97,7 +116,7 @@ class SprayJsonBuilder(builder: ScalaModelBuilder) extends JsonBuilderStrategy {
   }
 }
 
-class PlayJsonBuilder(builder: ScalaModelBuilder) extends JsonBuilderStrategy {
+class PlayJsonBuilder(val builder: ScalaModelBuilder) extends JsonBuilderStrategy {
   def buildWithValidation(definedType: DefinedType): Seq[ScalaAST.Statement] = {
     Seq(
       ScalaAST.Import("play.api.libs.json._"),
@@ -125,12 +144,7 @@ class PlayJsonBuilder(builder: ScalaModelBuilder) extends JsonBuilderStrategy {
   }
 
   private def implicitAttributes(definedType: DefinedType): Seq[ScalaAST.Statement] = {
-    definedType
-      .attributes
-      .map(_.typeReference)
-      .filterNot(builder.isNative)
-      .map(builder.generateMainType)
-      .distinct
+    JsonBuilderStrategy.extractUsedTypes(definedType, builder)
       .map { mainType =>
         ScalaAST.Val(
           name = s"${mainType}Format",

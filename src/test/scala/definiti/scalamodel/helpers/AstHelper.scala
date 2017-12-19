@@ -16,6 +16,14 @@ object AstHelper {
     )
   }
 
+  def attributeVerificationDefinedType(name: String, typ: String, higherType: String): ClassVal = {
+    ClassVal(
+      name = s"${name}Verification",
+      typ = s"Verification[${higherType}[${typ}]]",
+      body = New(s"${higherType}Verification", Seq(CallAttribute(SimpleExpression(typ), "allVerifications")))
+    )
+  }
+
   def attributeVerificationAliasType(name: String, typ: String, realType: String): ClassVal = {
     ClassVal(
       name = s"${name}Verification",

@@ -42,7 +42,8 @@ object PlayJsonSpec {
           "MySecondType",
           Parameter("myFirstAttribute", "BigDecimal"),
           Parameter("mySecondAttribute", "MyFirstType"),
-          Parameter("myThirdAttribute", "MyFirstType")
+          Parameter("myThirdAttribute", "List[MyFirstType]"),
+          Parameter("myFourthAttribute", "Option[MyFirstType]")
         ),
         secondDefinedTypeObject(validation)
       )
@@ -104,10 +105,17 @@ object PlayJsonSpec {
       body = Seq(
         attributeVerification("myFirstAttribute", "BigDecimal"),
         attributeVerificationDefinedType("mySecondAttribute", "MyFirstType"),
-        attributeVerificationDefinedType("myThirdAttribute", "MyFirstType"),
+        attributeVerificationDefinedType("myThirdAttribute", "MyFirstType", "List"),
+        attributeVerificationDefinedType("myFourthAttribute", "MyFirstType", "Option"),
         typeVerifications("MySecondType"),
-        allVerifications("MySecondType", "myFirstAttribute", "mySecondAttribute", "myThirdAttribute"),
-        applyCheck("MySecondType", "myFirstAttribute" -> "BigDecimal", "mySecondAttribute" -> "MyFirstType", "myThirdAttribute" -> "MyFirstType")
+        allVerifications("MySecondType", "myFirstAttribute", "mySecondAttribute", "myThirdAttribute", "myFourthAttribute"),
+        applyCheck(
+          "MySecondType",
+          "myFirstAttribute" -> "BigDecimal",
+          "mySecondAttribute" -> "MyFirstType",
+          "myThirdAttribute" -> "List[MyFirstType]",
+          "myFourthAttribute" -> "Option[MyFirstType]"
+        )
       ) ++ secondDefinedTypeJson(validation)
     )
   }

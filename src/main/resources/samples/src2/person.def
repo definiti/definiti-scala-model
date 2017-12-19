@@ -24,7 +24,7 @@ type Person {
 type Identity {
   firstName: RequiredNoun
   lastName: RequiredNoun
-  contact: Contact
+  contacts: List[Contact]
 }
 
 type Contact {
