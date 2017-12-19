@@ -2,7 +2,7 @@ package definiti.scalamodel.builder
 
 import definiti.core.ast._
 import definiti.scalamodel.ScalaAST
-import definiti.scalamodel.utils.ListUtils
+import definiti.scalamodel.utils.{ListUtils, StringUtils}
 
 trait TypeBuilder {
   self: ScalaModelBuilder =>
@@ -16,7 +16,7 @@ trait TypeBuilder {
 
       case LambdaReference(inputTypes, outputType) =>
         def generateOneType(typeReference: TypeReference): String = {
-          val typeName = typeReference.typeName
+          val typeName = StringUtils.lastPart(typeReference.typeName)
           val generics = generateGenericTypes(typeReference.genericTypes)
           typeName + generics
         }
@@ -35,7 +35,7 @@ trait TypeBuilder {
       case Some(aliasType: AliasType) =>
         generateMainType(aliasType.alias, ListUtils.replaceOrdered(aliasType.alias.genericTypes, outerTypeReferences))
       case _ =>
-        typeReference.typeName
+        StringUtils.lastPart(typeReference.typeName)
     }
   }
 
@@ -57,7 +57,7 @@ trait TypeBuilder {
     def generateGenericType(genericType: TypeReference): String = {
       val mainType = library.types.get(genericType.typeName) match {
         case Some(aliasType: AliasType) => generateGenericType(aliasType.alias)
-        case _ => nativeTypeMapping.getOrElse(genericType.typeName, genericType.typeName)
+        case _ => nativeTypeMapping.getOrElse(genericType.typeName, StringUtils.lastPart(genericType.typeName))
       }
       mainType + generateGenericTypes(genericType.genericTypes)
     }

@@ -21,18 +21,21 @@ object ScalaAST {
 
   case class Package(
     name: String,
+    imports: Seq[Import],
     elements: Seq[PackageElement]
   ) extends PackageElement
 
   object Package {
-    def apply(name: String, elements: PackageElement*)(implicit dummyImplicit: DummyImplicit): Package = {
-      new Package(name, elements)
+    def apply(name: String, imports: Seq[Import], elements: PackageElement*)(implicit dummyImplicit: DummyImplicit): Package = {
+      new Package(name, imports, elements)
     }
   }
 
   case class PackageDeclaration(name: String) extends Statement
 
   case class Import(name: String) extends Statement
+
+  case object Blank extends Statement
 
   case class PackageDef(name: String, body: Seq[Statement]) extends Statement
 

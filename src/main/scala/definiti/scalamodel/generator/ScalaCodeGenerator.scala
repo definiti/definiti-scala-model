@@ -192,6 +192,7 @@ object ScalaCodeGenerator {
       case ast: ScalaAST.Def2 => generateDef2(ast, indent)
       case ast: ScalaAST.PackageDeclaration => generatePackageDeclaration(ast)
       case ast: ScalaAST.Import => generateImport(ast)
+      case ScalaAST.Blank => ""
       case ast: ScalaAST.PackageDef => generatePackageDef(ast, indent)
       case ast: ScalaAST.StatementsGroup => generateStatementsGroup(ast, indent)
       case ast: ScalaAST.Val => generateVal(ast, indent)

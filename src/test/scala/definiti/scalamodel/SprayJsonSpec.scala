@@ -1,6 +1,5 @@
 package definiti.scalamodel
 
-import definiti.core.ValidValue
 import definiti.scalamodel.ScalaAST._
 import definiti.scalamodel.helpers.{ConfigurationMock, EndToEndSpec}
 
@@ -8,15 +7,15 @@ class SprayJsonSpec extends EndToEndSpec {
   import SprayJsonSpec._
 
   "The generator" should "generate the simple json of all defined type when no validation" in {
-    val expected = ValidValue(definedType(JsonValidation.none))
+    val expected = definedType(JsonValidation.none)
     val output = processFile("json.definedType", configuration(JsonValidation.none))
-    output should be(expected)
+    output should beValidRoot(expected)
   }
 
   it should "generate the json of all defined type with flat validation" in {
-    val expected = ValidValue(definedType(JsonValidation.flat))
+    val expected = definedType(JsonValidation.flat)
     val output = processFile("json.definedType", configuration(JsonValidation.flat))
-    output should be(expected)
+    output should beValidRoot(expected)
   }
 }
 
@@ -36,9 +35,10 @@ object SprayJsonSpec {
     Root(
       Package(
         "my",
+        Seq.empty,
         CaseClassDef("MyFirstType", Parameter("myAttribute", "String")),
         firstDefinedTypeObject(validation),
-        CaseClassDef("MySecondType", Parameter("myFirstAttribute", "BigDecimal"), Parameter("mySecondAttribute", "my.MyFirstType")),
+        CaseClassDef("MySecondType", Parameter("myFirstAttribute", "BigDecimal"), Parameter("mySecondAttribute", "MyFirstType")),
         secondDefinedTypeObject(validation)
       )
     )
@@ -97,10 +97,10 @@ object SprayJsonSpec {
       name = "MySecondType",
       body = Seq(
         attributeVerification("myFirstAttribute", "BigDecimal"),
-        attributeVerificationDefinedType("mySecondAttribute", "my.MyFirstType"),
+        attributeVerificationDefinedType("mySecondAttribute", "MyFirstType"),
         typeVerifications("MySecondType"),
         allVerifications("MySecondType", "myFirstAttribute", "mySecondAttribute"),
-        applyCheck("MySecondType", "myFirstAttribute" -> "BigDecimal", "mySecondAttribute" -> "my.MyFirstType")
+        applyCheck("MySecondType", "myFirstAttribute" -> "BigDecimal", "mySecondAttribute" -> "MyFirstType")
       ) ++ secondDefinedTypeJson(validation)
     )
   }

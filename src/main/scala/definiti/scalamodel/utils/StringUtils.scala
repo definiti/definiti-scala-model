@@ -1,7 +1,7 @@
 package definiti.scalamodel.utils
 
 object StringUtils {
-  def lastPart(source: String, separator: Char): String = {
+  def lastPart(source: String, separator: Char = '.'): String = {
     if (source.isEmpty) {
       source
     } else if (source.last == separator) {
@@ -13,7 +13,7 @@ object StringUtils {
     }
   }
 
-  def excludeLastPart(source: String, separator: Char): String = {
+  def excludeLastPart(source: String, separator: Char = '.'): String = {
     if (source.isEmpty) {
       source
     } else if (source.last == separator) {
