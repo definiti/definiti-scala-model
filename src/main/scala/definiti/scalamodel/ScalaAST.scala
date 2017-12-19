@@ -111,8 +111,16 @@ object ScalaAST {
   case class CallFunction(target: Expression, arguments: Seq[Expression]) extends Expression with Unambiguous
 
   object CallFunction {
+    def apply(target: String): CallFunction = {
+      new CallFunction(SimpleExpression(target), Seq.empty)
+    }
+
     def apply(target: String, arguments: Expression*): CallFunction = {
       new CallFunction(SimpleExpression(target), arguments)
+    }
+
+    def apply(target: String, arguments: String*)(implicit dummyImplicit: DummyImplicit): CallFunction = {
+      new CallFunction(SimpleExpression(target), arguments.map(SimpleExpression))
     }
   }
 
@@ -186,7 +194,7 @@ object ScalaAST {
     def apply(statement: Option[Statement]): StatementsGroup = new StatementsGroup(statement.toSeq)
   }
 
-  case class Val(name: String, value: Expression, isLazy: Boolean = false) extends Statement
+  case class Val(name: String, value: Expression, isLazy: Boolean = false, isImplicit: Boolean = false) extends Statement
 
   case class TraitDef(name: String, body: Seq[Statement], isSealed: Boolean = false) extends Statement
 

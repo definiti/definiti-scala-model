@@ -7,14 +7,14 @@ class SprayJsonSpec extends EndToEndSpec {
   import SprayJsonSpec._
 
   "The generator" should "generate the simple json of all defined type when no validation" in {
-    val expected = definedType(JsonValidation.none)
-    val output = processFile("json.definedType", configuration(JsonValidation.none))
+    val expected = definedType(false)
+    val output = processFile("json.definedType", configuration(false))
     output should beValidRoot(expected)
   }
 
   it should "generate the json of all defined type with flat validation" in {
-    val expected = definedType(JsonValidation.flat)
-    val output = processFile("json.definedType", configuration(JsonValidation.flat))
+    val expected = definedType(true)
+    val output = processFile("json.definedType", configuration(true))
     output should beValidRoot(expected)
   }
 }
@@ -22,7 +22,7 @@ class SprayJsonSpec extends EndToEndSpec {
 object SprayJsonSpec {
   import definiti.scalamodel.helpers.AstHelper._
 
-  def configuration(jsonValidation: JsonValidation.Value): Configuration = {
+  def configuration(jsonValidation: Boolean): Configuration = {
     ConfigurationMock(
       json = JsonConfiguration(
         format = JsonFormat.spray,
@@ -31,7 +31,7 @@ object SprayJsonSpec {
     )
   }
 
-  def definedType(validation: JsonValidation.Value): Root = {
+  def definedType(validation: Boolean): Root = {
     Root(
       Package(
         "my",
@@ -44,7 +44,7 @@ object SprayJsonSpec {
     )
   }
 
-  private def firstDefinedTypeObject(validation: JsonValidation.Value): ObjectDef = {
+  private def firstDefinedTypeObject(validation: Boolean): ObjectDef = {
     ObjectDef(
       name = "MyFirstType",
       body = Seq(
@@ -56,43 +56,47 @@ object SprayJsonSpec {
     )
   }
 
-  private def firstDefinedTypeJson(validation: JsonValidation.Value): Seq[Statement] = {
-    validation match {
-      case JsonValidation.none =>
-        Seq(
-          Import("spray.json.RootJsonFormat"),
-          Import("definiti.native.JsonSpraySupport._"),
-          ClassVal(
-            name = s"MyFirstTypeFormat",
-            typ = s"RootJsonFormat[MyFirstType]",
-            body = Seq(CallFunction(s"jsonFormat1", SimpleExpression(s"MyFirstType.apply"))),
-            isImplicit = true
-          )
+  private def firstDefinedTypeJson(validation: Boolean): Seq[Statement] = {
+    if (validation) {
+      Seq(
+        Import("spray.json.RootJsonFormat"),
+        Import("definiti.native.JsonSpraySupport._"),
+        ClassVal(
+          name = s"MyFirstTypeRawFormat",
+          typ = s"RootJsonFormat[MyFirstType]",
+          body = Seq(CallFunction(
+            target = "jsonFormat1",
+            SimpleExpression(s"MyFirstType.apply")
+          ))
+        ),
+        ClassVal(
+          name = s"MyFirstTypeFormat",
+          typ = s"RootJsonFormat[MyFirstType]",
+          body = Seq(
+            CallFunction(
+              target = "formatWithValidation",
+              SimpleExpression("MyFirstTypeRawFormat"),
+              SimpleExpression("allVerifications")
+            )
+          ),
+          isImplicit = true
         )
-      case JsonValidation.flat =>
-        Seq(
-          Import("spray.json.RootJsonFormat"),
-          Import("definiti.native.JsonSpraySupport._"),
-          ClassVal(
-            name = s"MyFirstTypeFormat",
-            typ = s"RootJsonFormat[MyFirstType]",
-            body = Seq(
-              CallFunction(
-                target = "formatWithValidation",
-                CallFunction(
-                  target = "jsonFormat1",
-                  SimpleExpression(s"MyFirstType.apply")
-                ),
-                SimpleExpression("allVerifications")
-              )
-            ),
-            isImplicit = true
-          )
+      )
+    } else {
+      Seq(
+        Import("spray.json.RootJsonFormat"),
+        Import("definiti.native.JsonSpraySupport._"),
+        ClassVal(
+          name = s"MyFirstTypeFormat",
+          typ = s"RootJsonFormat[MyFirstType]",
+          body = Seq(CallFunction(s"jsonFormat1", SimpleExpression(s"MyFirstType.apply"))),
+          isImplicit = true
         )
+      )
     }
   }
 
-  private def secondDefinedTypeObject(validation: JsonValidation.Value): ObjectDef = {
+  private def secondDefinedTypeObject(validation: Boolean): ObjectDef = {
     ObjectDef(
       name = "MySecondType",
       body = Seq(
@@ -105,39 +109,50 @@ object SprayJsonSpec {
     )
   }
 
-  private def secondDefinedTypeJson(validation: JsonValidation.Value): Seq[Statement] = {
-    validation match {
-      case JsonValidation.none =>
-        Seq(
-          Import("spray.json.RootJsonFormat"),
-          Import("definiti.native.JsonSpraySupport._"),
-          ClassVal(
-            name = s"MySecondTypeFormat",
-            typ = s"RootJsonFormat[MySecondType]",
-            body = Seq(CallFunction(s"jsonFormat2", SimpleExpression(s"MySecondType.apply"))),
-            isImplicit = true
-          )
-        )
-      case JsonValidation.flat =>
-        Seq(
-          Import("spray.json.RootJsonFormat"),
-          Import("definiti.native.JsonSpraySupport._"),
-          ClassVal(
-            name = s"MySecondTypeFormat",
-            typ = s"RootJsonFormat[MySecondType]",
-            body = Seq(
-              CallFunction(
-                target = "formatWithValidation",
-                CallFunction(
-                  target = "jsonFormat2",
-                  SimpleExpression(s"MySecondType.apply")
-                ),
-                SimpleExpression("allVerifications")
-              )
+  private def secondDefinedTypeJson(validation: Boolean): Seq[Statement] = {
+    if (validation) {
+      Seq(
+        Import("spray.json.RootJsonFormat"),
+        Import("definiti.native.JsonSpraySupport._"),
+        ClassVal(
+          name = s"MySecondTypeRawFormat",
+          typ = s"RootJsonFormat[MySecondType]",
+          body = Seq(
+            Val(
+              name = "MyFirstTypeFormat",
+              value = CallAttribute("MyFirstType", "MyFirstTypeRawFormat"),
+              isImplicit = true
             ),
-            isImplicit = true
+            CallFunction(
+              target = "jsonFormat2",
+              SimpleExpression(s"MySecondType.apply")
+            )
           )
+        ),
+        ClassVal(
+          name = s"MySecondTypeFormat",
+          typ = s"RootJsonFormat[MySecondType]",
+          body = Seq(
+            CallFunction(
+              target = "formatWithValidation",
+              SimpleExpression(s"MySecondTypeRawFormat"),
+              SimpleExpression("allVerifications")
+            )
+          ),
+          isImplicit = true
         )
+      )
+    } else {
+      Seq(
+        Import("spray.json.RootJsonFormat"),
+        Import("definiti.native.JsonSpraySupport._"),
+        ClassVal(
+          name = s"MySecondTypeFormat",
+          typ = s"RootJsonFormat[MySecondType]",
+          body = Seq(CallFunction(s"jsonFormat2", SimpleExpression(s"MySecondType.apply"))),
+          isImplicit = true
+        )
+      )
     }
   }
 }

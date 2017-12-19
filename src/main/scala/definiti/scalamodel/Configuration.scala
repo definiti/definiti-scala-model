@@ -3,7 +3,6 @@ package definiti.scalamodel
 import java.nio.file.{Path, Paths}
 
 import com.typesafe.config.{Config, ConfigFactory}
-import com.typesafe.scalalogging.Logger
 
 private[scalamodel] trait Configuration {
   def destination: Path
@@ -11,7 +10,7 @@ private[scalamodel] trait Configuration {
   def json: JsonConfiguration
 }
 
-private[scalamodel] case class JsonConfiguration(format: JsonFormat.Value, validation: JsonValidation.Value)
+private[scalamodel] case class JsonConfiguration(format: JsonFormat.Value, validation: Boolean)
 
 private[scalamodel] object JsonFormat extends Enumeration {
   val play, spray, none = Value
@@ -21,17 +20,7 @@ private[scalamodel] object JsonFormat extends Enumeration {
   }
 }
 
-private[scalamodel] object JsonValidation extends Enumeration {
-  val flat, none = Value
-
-  def fromString(value: String): Option[JsonValidation.Value] = {
-    values.find(_.toString == value)
-  }
-}
-
 private[scalamodel] class FileConfiguration(config: Config) extends Configuration {
-  private val logger = Logger(getClass)
-
   def this() {
     this(ConfigFactory.load())
   }
@@ -43,7 +32,7 @@ private[scalamodel] class FileConfiguration(config: Config) extends Configuratio
 
   lazy val json: JsonConfiguration = JsonConfiguration(
     format = getStringOpt("definiti.scalamodel.json.format").flatMap(JsonFormat.fromString).getOrElse(JsonFormat.none),
-    validation = getStringOpt("definiti.scalamodel.json.validation").flatMap(JsonValidation.fromString).getOrElse(JsonValidation.none)
+    validation = getBooleanOpt("definiti.scalamodel.json.validation").getOrElse(false)
   )
 
   private def getFirstDefinedPath(keys: String*): Option[Path] = {
@@ -67,6 +56,14 @@ private[scalamodel] class FileConfiguration(config: Config) extends Configuratio
   private def getStringOpt(configurationPath: String): Option[String] = {
     if (config.hasPath(configurationPath)) {
       Some(config.getString(configurationPath))
+    } else {
+      None
+    }
+  }
+
+  private def getBooleanOpt(configurationPath: String): Option[Boolean] = {
+    if (config.hasPath(configurationPath)) {
+      Some(config.getBoolean(configurationPath))
     } else {
       None
     }
