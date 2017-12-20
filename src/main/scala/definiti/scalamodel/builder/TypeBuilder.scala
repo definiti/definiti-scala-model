@@ -10,9 +10,7 @@ trait TypeBuilder {
   def generateType(typeReference: AbstractTypeReference): String = {
     typeReference match {
       case typeReference: TypeReference =>
-        val finalTypeName = generateMainType(typeReference)
-        val parameterGenerics = generateGenericsOfTypes(typeReference)
-        finalTypeName + parameterGenerics
+        generateScalaType(typeReference).toCode
 
       case LambdaReference(inputTypes, outputType) =>
         def generateOneType(typeReference: TypeReference): String = {
@@ -25,18 +23,24 @@ trait TypeBuilder {
     }
   }
 
-  def generateMainType(typeReference: TypeReference): String = {
-    generateMainType(typeReference, typeReference.genericTypes)
-  }
-  def generateMainType(typeReference: TypeReference, outerTypeReferences: Seq[TypeReference]): String = {
-    library.types.get(typeReference.typeName) match {
-      case Some(_: NativeClassDefinition) =>
-        nativeTypeMapping.getOrElse(typeReference.typeName, typeReference.typeName)
-      case Some(aliasType: AliasType) =>
-        generateMainType(aliasType.alias, ListUtils.replaceOrdered(aliasType.alias.genericTypes, outerTypeReferences))
-      case _ =>
-        StringUtils.lastPart(typeReference.typeName)
+  def generateScalaType(typeReference: TypeReference): ScalaAST.Type = {
+    def process(typeReference: TypeReference, outerTypes: Seq[TypeReference]): ScalaAST.Type = {
+      library.types.get(typeReference.typeName) match {
+        case Some(_: NativeClassDefinition) =>
+          ScalaAST.Type(
+            name = nativeTypeMapping.getOrElse(typeReference.typeName, typeReference.typeName),
+            generics = ListUtils.replaceOrdered(typeReference.genericTypes, outerTypes).map(process(_, Seq.empty))
+          )
+        case Some(aliasType: AliasType) =>
+          process(aliasType.alias, ListUtils.replaceOrdered(aliasType.alias.genericTypes, typeReference.genericTypes))
+        case _ =>
+          ScalaAST.Type(
+            name = StringUtils.lastPart(typeReference.typeName),
+            generics = ListUtils.replaceOrdered(typeReference.genericTypes, outerTypes).map(process(_, Seq.empty))
+          )
+      }
     }
+    process(typeReference, Seq.empty)
   }
 
   def generateGenericsOfTypes(typeReference: TypeReference): String = {
@@ -64,14 +68,6 @@ trait TypeBuilder {
 
     if (genericTypes.nonEmpty) {
       genericTypes.map(generateGenericType).mkString("[", ",", "]")
-    } else {
-      ""
-    }
-  }
-
-  def generateGenericTypeDefinition(definedType: DefinedType): String = {
-    if (definedType.genericTypes.nonEmpty) {
-      definedType.genericTypes.mkString("[", ",", "]")
     } else {
       ""
     }
@@ -120,6 +116,12 @@ trait TypeBuilder {
       case alias: AliasType => isNative(alias.alias)
       case _ => false
     }
+  }
+
+  def isNative(typ: ScalaAST.Type): Boolean = isNative(typ.name)
+
+  def isNative(typ: String): Boolean = {
+    nativeTypeMapping.values.exists(_ == typ)
   }
 
   def isList(typeReference: TypeReference): Boolean = {

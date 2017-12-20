@@ -217,4 +217,21 @@ object ScalaAST {
   case class Case(pattern: String, body: Statement)
   case class Match(expr: Expression, cases: Seq[Case]) extends Statement
 
+  case class Type(name: String, generics: Seq[Type]) extends Statement {
+    // FIXME: We keep this code generation here for compatibility.
+    // An improvement of the ScalaAST is needed to always work with Type and not String.
+    def toCode: String = {
+      if (generics.nonEmpty) {
+        s"${name}[${generics.map(_.toCode).mkString(", ")}]"
+      } else {
+        name
+      }
+    }
+  }
+
+  object Type {
+    def apply(name: String, generics: Type*)(implicit dummyImplicit: DummyImplicit): Type = {
+      new Type(name, generics)
+    }
+  }
 }

@@ -3,6 +3,7 @@ package my.person
 import my.verifications.NonEmptyString
 import my.verifications.NonBlank
 import my.verifications.PhoneNumber
+import my.verifications.NonEmptyList
 import my.functions.isEmail
 
 type Person {
@@ -30,6 +31,12 @@ type Identity {
 type Contact {
   email: RequiredString
   phones: List[Phone]
+  addresses: RequiredList[Address]
+}
+
+type Address {
+  street: String
+  city: String
 }
 
 type RequiredString = String verifying NonEmptyString
@@ -37,3 +44,5 @@ type RequiredString = String verifying NonEmptyString
 type RequiredNoun = String verifying NonEmptyString("This noun must be defined")
 
 type Phone = String verifying NonBlank("Please provide a phone number") verifying PhoneNumber
+
+type RequiredList[A] = List[A] verifying NonEmptyList

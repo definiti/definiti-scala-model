@@ -1,6 +1,6 @@
 package definiti.scalamodel.builder
 
-import definiti.core.ast.{DefinedType, TypeReference}
+import definiti.core.ast.DefinedType
 import definiti.scalamodel.{JsonFormat, ScalaAST}
 
 trait JsonBuilder {
@@ -32,22 +32,16 @@ object JsonBuilderStrategy {
     definedType
       .attributes
       .map(_.typeReference)
-      .map(extractConcreteType)
+      .map(builder.generateScalaType)
+      .flatMap(extractConcreteTypes(_, builder))
       .filterNot(builder.isNative)
-      .map(builder.generateMainType)
       .distinct
   }
 
-  private def extractConcreteType(typeReference: TypeReference): TypeReference = {
-    if (typeReference.typeName == "List" || typeReference.typeName == "Option") {
-      typeReference
-        .genericTypes
-        .headOption
-        .map(extractConcreteType)
-        .getOrElse(typeReference)
-    } else {
-      typeReference
-    }
+  private def extractConcreteTypes(typ: ScalaAST.Type, builder: ScalaModelBuilder): Seq[String] = {
+    val mainConcreteType = typ.name
+    val genericConcreteTypes = typ.generics.flatMap(extractConcreteTypes(_, builder))
+    mainConcreteType +: genericConcreteTypes
   }
 }
 
