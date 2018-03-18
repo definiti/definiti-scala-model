@@ -31,7 +31,7 @@ object JsonBuilderStrategy {
   def extractUsedTypes(definedType: DefinedType, builder: ScalaModelBuilder): Seq[String] = {
     definedType
       .attributes
-      .map(_.typeReference)
+      .map(_.typeDeclaration)
       .map(builder.generateScalaType)
       .flatMap(extractConcreteTypes(_, builder))
       .filterNot(builder.isNative)

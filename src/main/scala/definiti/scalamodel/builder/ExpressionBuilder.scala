@@ -59,15 +59,19 @@ trait ExpressionBuilder {
       ScalaAST.CallFunction(ScalaAST.SimpleExpression(StringUtils.lastPart(functionCall.name)), functionCall.parameters.map(generateExpression))
     case lambda: LambdaExpression =>
       ScalaAST.Lambda(lambda.parameterList.map(generateParameter), generateExpression(lambda.expression))
+    case _: OkValue =>
+      ScalaAST.SimpleExpression("None")
+    case koValue: KoValue =>
+      ScalaAST.CallFunction("Some", ScalaAST.CallFunction("Message", ScalaAST.SimpleExpression("message") +: koValue.parameters.map(generateExpression): _*))
   }
 
   private def generateMethodCall(methodCall: MethodCall): ScalaAST.Expression with ScalaAST.Unambiguous with Product with Serializable = {
     methodCall.expression.returnType match {
       case typeReference: TypeReference =>
-        library.types(typeReference.typeName) match {
-          case _: NativeClassDefinition =>
+        getFinalType(typeReference) match {
+          case native: NativeClassDefinition =>
             ScalaAST.CallFunction(
-              ScalaAST.SimpleExpression(s"${typeReference.typeName}Extension.${methodCall.method}"),
+              ScalaAST.SimpleExpression(s"${native.name}Extension.${methodCall.method}"),
               (methodCall.expression +: methodCall.parameters).map(generateExpression)
             )
           case _ =>
@@ -80,10 +84,21 @@ trait ExpressionBuilder {
     }
   }
 
+  private def getFinalType(typeReference: TypeReference): ClassDefinition = {
+    library.typesMap(typeReference.typeName) match {
+      case aliasType: AliasType => getFinalType(aliasType.alias)
+      case other => other
+    }
+  }
+
+  private def getFinalType(typeDeclaration: TypeDeclaration): ClassDefinition = {
+    getFinalType(typeDeclarationToTypeReference(typeDeclaration))
+  }
+
   private def generateAttributeCall(attributeCall: AttributeCall): ScalaAST.Expression with ScalaAST.Unambiguous with Product with Serializable = {
     attributeCall.expression.returnType match {
       case typeReference: TypeReference =>
-        library.types(typeReference.typeName) match {
+        library.typesMap(typeReference.typeName) match {
           case _: NativeClassDefinition =>
             ScalaAST.CallFunction(
               ScalaAST.SimpleExpression(s"${typeReference.typeName}Extension.${attributeCall.attribute}"),

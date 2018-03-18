@@ -39,11 +39,19 @@ object ScalaAST {
 
   case class PackageDef(name: String, body: Seq[Statement]) extends Statement
 
-  case class ObjectDef(name: String, body: Seq[Statement]) extends Statement with PackageElement
+  case class ObjectDef(
+    name: String,
+    extendz: Option[Extends],
+    body: Seq[Statement],
+    property: Option[String]
+  ) extends Statement with PackageElement
 
   object ObjectDef {
     def apply(name: String, statements: Statement*)(implicit dummyImplicit: DummyImplicit): ObjectDef = {
-      ObjectDef(name, statements)
+      ObjectDef(name, None, statements, None)
+    }
+    def apply(name: String, body: Seq[Statement]): ObjectDef = {
+      ObjectDef(name, None, body, None)
     }
   }
 
@@ -130,11 +138,15 @@ object ScalaAST {
     def apply(body: Statement*)(implicit dummyImplicit: DummyImplicit): Block = new Block(body)
   }
 
-  case class New(name: String, arguments: Seq[Expression]) extends Expression
+  case class New(
+    name: String,
+    generics: Seq[String],
+    arguments: Seq[Expression]
+  ) extends Expression
 
   object New {
     def apply(name: String, arguments: Expression*)(implicit dummyImplicit: DummyImplicit): New = {
-      new New(name, arguments)
+      new New(name, Seq.empty, arguments)
     }
   }
 
@@ -204,7 +216,9 @@ object ScalaAST {
 
   case class TraitDef(name: String, body: Seq[Statement], isSealed: Boolean = false) extends Statement
 
-  case class ClassDef(name: String, extendz: Option[String], parameters: Seq[Parameter], body: Seq[Statement], property: Option[String], privateConstructor: Boolean) extends Statement
+  case class ClassDef(name: String, generics: Seq[String], extendz: Option[Extends], parameters: Seq[Parameter], body: Seq[Statement], property: Option[String], privateConstructor: Boolean) extends Statement with PackageElement
+
+  case class Extends(typ: Type, parameters: Seq[Statement])
 
   case class ClassVal(name: String, typ: String, body: Seq[Statement], isLazy: Boolean = false, isPrivate: Boolean = false, isImplicit: Boolean = false) extends Statement
 

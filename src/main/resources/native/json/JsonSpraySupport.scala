@@ -41,7 +41,8 @@ object JsonSpraySupport extends DefaultJsonProtocol {
     override def getMessage: String = {
       JsObject(
         errors.map { error =>
-          error.path -> JsArray(error.messages.map(JsString(_)): _*)
+          // TODO: change the message handling
+          error.path -> JsArray(error.messages.map(m => JsString(m.toString)): _*)
         }: _*
       ).compactPrint
     }

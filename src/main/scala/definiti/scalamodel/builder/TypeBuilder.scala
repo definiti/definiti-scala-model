@@ -7,6 +7,46 @@ import definiti.scalamodel.utils.{ListUtils, StringUtils}
 trait TypeBuilder {
   self: ScalaModelBuilder =>
 
+  def generateType(typeDeclaration: TypeDeclaration): ScalaAST.Type = {
+    def process(typeDeclaration: TypeDeclaration, outerTypes: Seq[TypeDeclaration]): ScalaAST.Type = {
+      library.typesMap.get(typeDeclaration.typeName) match {
+        case Some(_: NativeClassDefinition) =>
+          ScalaAST.Type(
+            name = nativeTypeMapping.getOrElse(typeDeclaration.typeName, typeDeclaration.typeName),
+            generics = ListUtils.replaceOrdered(typeDeclaration.genericTypes, outerTypes).map(process(_, Seq.empty))
+          )
+        case Some(aliasType: AliasType) =>
+          process(aliasType.alias, ListUtils.replaceOrdered(aliasType.alias.genericTypes, typeDeclaration.genericTypes))
+        case Some(enum: Enum) =>
+          ScalaAST.Type(s"${enum.name}.Value", Seq.empty)
+        case _ =>
+          ScalaAST.Type(
+            name = StringUtils.lastPart(typeDeclaration.typeName),
+            generics = ListUtils.replaceOrdered(typeDeclaration.genericTypes, outerTypes).map(process(_, Seq.empty))
+          )
+      }
+    }
+
+    process(typeDeclaration, Seq.empty)
+  }
+
+  def generateType(classDefinition: ClassDefinition): ScalaAST.Type = {
+    classDefinition match {
+      case native: NativeClassDefinition =>
+        ScalaAST.Type(
+          name = nativeTypeMapping.getOrElse(native.name, native.name),
+          generics = classDefinition.genericTypes.map(ScalaAST.Type(_))
+        )
+      case aliasType: AliasType =>
+        generateType(aliasType.alias)
+      case _ =>
+        ScalaAST.Type(
+          name = StringUtils.lastPart(classDefinition.name),
+          generics = classDefinition.genericTypes.map(ScalaAST.Type(_))
+        )
+    }
+  }
+
   def generateType(typeReference: AbstractTypeReference): String = {
     typeReference match {
       case typeReference: TypeReference =>
@@ -25,7 +65,7 @@ trait TypeBuilder {
 
   def generateScalaType(typeReference: TypeReference): ScalaAST.Type = {
     def process(typeReference: TypeReference, outerTypes: Seq[TypeReference]): ScalaAST.Type = {
-      library.types.get(typeReference.typeName) match {
+      library.typesMap.get(typeReference.typeName) match {
         case Some(_: NativeClassDefinition) =>
           ScalaAST.Type(
             name = nativeTypeMapping.getOrElse(typeReference.typeName, typeReference.typeName),
@@ -43,11 +83,31 @@ trait TypeBuilder {
     process(typeReference, Seq.empty)
   }
 
+  def generateScalaType(typeDeclaration: TypeDeclaration): ScalaAST.Type = {
+    def process(typeDeclaration: TypeDeclaration, outerTypes: Seq[TypeDeclaration]): ScalaAST.Type = {
+      library.typesMap.get(typeDeclaration.typeName) match {
+        case Some(_: NativeClassDefinition) =>
+          ScalaAST.Type(
+            name = nativeTypeMapping.getOrElse(typeDeclaration.typeName, typeDeclaration.typeName),
+            generics = ListUtils.replaceOrdered(typeDeclaration.genericTypes, outerTypes).map(process(_, Seq.empty))
+          )
+        case Some(aliasType: AliasType) =>
+          process(aliasType.alias, ListUtils.replaceOrdered(aliasType.alias.genericTypes, typeDeclaration.genericTypes))
+        case _ =>
+          ScalaAST.Type(
+            name = StringUtils.lastPart(typeDeclaration.typeName),
+            generics = ListUtils.replaceOrdered(typeDeclaration.genericTypes, outerTypes).map(process(_, Seq.empty))
+          )
+      }
+    }
+    process(typeDeclaration, Seq.empty)
+  }
+
   def generateGenericsOfTypes(typeReference: TypeReference): String = {
     generateGenericsOfTypes(typeReference, typeReference.genericTypes)
   }
   def generateGenericsOfTypes(typeReference: TypeReference, outerTypeReferences: Seq[TypeReference]): String = {
-    library.types.get(typeReference.typeName) match {
+    library.typesMap.get(typeReference.typeName) match {
       case Some(_: NativeClassDefinition) =>
         generateGenericTypes(outerTypeReferences)
       case Some(aliasType: AliasType) =>
@@ -59,7 +119,7 @@ trait TypeBuilder {
 
   def generateGenericTypes(genericTypes: Seq[TypeReference]): String = {
     def generateGenericType(genericType: TypeReference): String = {
-      val mainType = library.types.get(genericType.typeName) match {
+      val mainType = library.typesMap.get(genericType.typeName) match {
         case Some(aliasType: AliasType) => generateGenericType(aliasType.alias)
         case _ => nativeTypeMapping.getOrElse(genericType.typeName, StringUtils.lastPart(genericType.typeName))
       }
@@ -73,8 +133,19 @@ trait TypeBuilder {
     }
   }
 
-  def verificationsFromTypeReference(typeReference: TypeReference): Seq[VerificationReference] = {
-    library.types.get(typeReference.typeName)
+  implicit def typeDeclarationToTypeReference(typeDeclaration: TypeDeclaration): TypeReference = {
+    TypeReference(
+      typeName = typeDeclaration.typeName,
+      genericTypes = typeDeclaration.genericTypes.map(typeDeclarationToTypeReference)
+    )
+  }
+
+  implicit def typeDeclarationToTypeReferenceSeq(typeDeclaration: Seq[TypeDeclaration]): Seq[TypeReference] = {
+    typeDeclaration.map(typeDeclarationToTypeReference)
+  }
+
+  def verificationsFromTypeDeclaration(typeDeclaration: TypeDeclaration): Seq[VerificationReference] = {
+    library.typesMap.get(typeDeclaration.typeName)
       .collect { case definedType: DefinedType => definedType }
       .toSeq
       .flatMap(verificationsFromType)
@@ -82,22 +153,8 @@ trait TypeBuilder {
 
   def verificationsFromType(classDefinition: ClassDefinition): Seq[VerificationReference] = {
     classDefinition match {
-      case aliasType: AliasType => verificationsFromTypeReference(aliasType.alias) ++ aliasType.inherited
+      case aliasType: AliasType => verificationsFromTypeDeclaration(aliasType.alias) ++ aliasType.inherited
       case definedType: DefinedType => definedType.inherited
-      case _ => Seq.empty
-    }
-  }
-
-  def internalVerificationsFromTypeReference(typeReference: TypeReference): Seq[TypeVerification] = {
-    library.types.get(typeReference.typeName)
-      .toSeq
-      .flatMap(internalVerificationsFromType)
-  }
-
-  def internalVerificationsFromType(classDefinition: ClassDefinition): Seq[TypeVerification] = {
-    classDefinition match {
-      case aliasType: AliasType => internalVerificationsFromTypeReference(aliasType.alias)
-      case definedType: DefinedType => definedType.verifications
       case _ => Seq.empty
     }
   }
@@ -111,7 +168,7 @@ trait TypeBuilder {
   }
 
   def isNative(typeReference: TypeReference): Boolean = {
-    library.types.get(typeReference.typeName).exists {
+    library.typesMap.get(typeReference.typeName).exists {
       case _: NativeClassDefinition => true
       case alias: AliasType => isNative(alias.alias)
       case _ => false
@@ -125,7 +182,7 @@ trait TypeBuilder {
   }
 
   def isList(typeReference: TypeReference): Boolean = {
-    library.types.get(typeReference.typeName).exists {
+    library.typesMap.get(typeReference.typeName).exists {
       case native: NativeClassDefinition => native.name == "List"
       case alias: AliasType => isList(alias.alias)
       case _ => false
@@ -133,7 +190,7 @@ trait TypeBuilder {
   }
 
   def isOption(typeReference: TypeReference): Boolean = {
-    library.types.get(typeReference.typeName).exists {
+    library.typesMap.get(typeReference.typeName).exists {
       case native: NativeClassDefinition => native.name == "Option"
       case alias: AliasType => isList(alias.alias)
       case _ => false

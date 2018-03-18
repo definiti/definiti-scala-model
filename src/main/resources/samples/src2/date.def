@@ -1,0 +1,15 @@
+package my.date
+
+enum Day {
+  Monday Tuesday Wednesday Thursday Friday Saturday Sunday
+}
+
+enum Month {
+  January February March April May June July August September October November December
+}
+
+type FullDate {
+  day: Day
+  month: Month
+  year: Number
+}

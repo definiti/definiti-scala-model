@@ -6,12 +6,16 @@ import definiti.scalamodel.{Configuration, ScalaAST}
 class ScalaModelBuilder(val config: Configuration, val library: Library)
   extends CommonBuilder
     with ClassDefinitionBuilder
+    with AliasTypeBuilder
+    with DefinedTypeBuilder
+    with EnumBuilder
     with ExpressionBuilder
     with ImportExtractor
     with JsonBuilder
     with NamedFunctionBuilder
     with PackageBuilder
     with TypeBuilder
+    with TypeVerificationBuilder
     with VerificationBuilder {
 
   def build(root: Root): ScalaAST.Root = {

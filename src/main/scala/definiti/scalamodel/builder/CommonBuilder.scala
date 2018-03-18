@@ -1,6 +1,7 @@
 package definiti.scalamodel.builder
 
 import definiti.core.ast._
+import definiti.scalamodel.ScalaAST
 
 trait CommonBuilder {
   self: ScalaModelBuilder =>
@@ -13,7 +14,8 @@ trait CommonBuilder {
     "Number" -> "BigDecimal",
     "Option" -> "Option",
     "String" -> "String",
-    "Unit" -> "Unit"
+    "Unit" -> "Unit",
+    "OkKo" -> "Option[Message]"
   )
 
   def verificationsFromNamespace(namespace: Namespace): Seq[Verification] = {
@@ -50,5 +52,16 @@ trait CommonBuilder {
     namespace.elements.collect {
       case namespace: Namespace => namespace
     }
+  }
+
+  def generateDef(name: String, definedFunction: DefinedFunction, property: Option[String] = None): ScalaAST.Def1 = {
+    ScalaAST.Def1(
+      name = name,
+      typ = generateType(definedFunction.body.returnType),
+      generics = definedFunction.genericTypes,
+      parameters = definedFunction.parameters.map(generateParameter),
+      body = Some(generateExpression(definedFunction.body)),
+      property = property
+    )
   }
 }

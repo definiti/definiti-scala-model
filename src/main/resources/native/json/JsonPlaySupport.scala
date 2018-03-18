@@ -31,7 +31,8 @@ object JsonPlaySupport {
           case Valid(value) => JsSuccess(value)
           case Invalid(errors) => JsError(
             errors.map { error =>
-              pathToJsonPath(error.path) -> Seq(JsonValidationError(error.messages))
+              // TODO: change the message handling
+              pathToJsonPath(error.path) -> Seq(JsonValidationError(error.messages.toString()))
             }
           )
         }

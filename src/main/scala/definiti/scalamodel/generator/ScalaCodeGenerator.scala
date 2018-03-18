@@ -1,7 +1,7 @@
 package definiti.scalamodel.generator
 
 import definiti.scalamodel.ScalaAST
-import definiti.scalamodel.ScalaAST.{Expression, Statement}
+import definiti.scalamodel.ScalaAST.{Expression, Extends, Statement}
 
 object ScalaCodeGenerator {
 
@@ -94,8 +94,11 @@ object ScalaCodeGenerator {
        |${inc(indent)}${ast.body.map(a => generateStatement(a, inc(indent))).mkString(s"\n${inc(indent)}")}
        |$indent}""".stripMargin
 
-  def generateNew(ast: ScalaAST.New, indent: String): String =
-    s"new ${ast.name}(${ast.arguments.map(a => generateExpression(a, indent)).mkString(", ")})"
+  def generateNew(ast: ScalaAST.New, indent: String): String = {
+    val generics = if (ast.generics.nonEmpty) ast.generics.mkString("[", ", ", "]") else ""
+    val parameters = ast.arguments.map(a => generateExpression(a, indent)).mkString(", ")
+    s"new ${ast.name}${generics}(${parameters})"
+  }
 
   def generateComment(ast: ScalaAST.Comment, indent: String): String =
     if ((indent.length + ast.str.length < 120) && !ast.str.contains("\n")) s"// ${ast.str}"
@@ -153,7 +156,21 @@ object ScalaCodeGenerator {
   }
 
   def generateClassDef(ast: ScalaAST.ClassDef, indent: String): String = {
-    s"""${ast.property.map(p => s"$p ").getOrElse("")}class ${ast.name}${if (ast.privateConstructor) " private" else ""}(${ast.parameters.map(generateParameter).mkString(", ")})${ast.extendz.map(e => s" extends $e").getOrElse("")}${if (ast.body.isEmpty) "" else " " + generateStatement(ScalaAST.Block(ast.body), indent)}"""
+    val property = ast.property.map(p => s"$p ").getOrElse("")
+    val privateProperty = if (ast.privateConstructor) " private" else ""
+    val generics = if (ast.generics.nonEmpty) ast.generics.mkString("[", ", ", "]") else ""
+    val parameters = ast.parameters.map(generateParameter).mkString(", ")
+    val extendz = ast.extendz.map(generateExtends).getOrElse("")
+    val body = if (ast.body.isEmpty) "" else " " + generateStatement(ScalaAST.Block(ast.body), indent)
+    s"""${property}class ${ast.name}${privateProperty}${generics}(${parameters})${extendz}${body}"""
+  }
+
+  def generateExtends(extendz: Extends): String = {
+    if (extendz.parameters.nonEmpty) {
+      s" extends ${extendz.typ.toCode}(${extendz.parameters.map(generateStatement(_, "")).mkString(", ")})"
+    } else {
+      s" extends ${extendz.typ.toCode}"
+    }
   }
 
   def generateCaseClassDef(ast: ScalaAST.CaseClassDef, indent: String): String = {
@@ -169,7 +186,7 @@ object ScalaCodeGenerator {
        |$indent}""".stripMargin
 
   def generateObjectDef(ast: ScalaAST.ObjectDef, indent: String): String =
-    s"""object ${ast.name} {
+    s"""object ${ast.name}${ast.extendz.map(generateExtends).getOrElse("")} {
        |${inc(indent)}${ast.body.map(a => generateStatement(a, inc(indent))).mkString(s"\n${inc(indent)}")}
        |$indent}""".stripMargin
 

@@ -5,8 +5,8 @@ sealed trait Verification[A] {
 
   private[native] def validate[B <: A](path: String, value: B): Validation[B]
 
-  def andThen(message: String)(check: A => Boolean): Verification[A] = {
-    new VerificationGroup[A](Seq(this, new ValueVerification[A](check, message)))
+  def andThen(definedVerification: DefinedVerification[A]): Verification[A] = {
+    new VerificationGroup[A](Seq(this, new ValueVerification[A](definedVerification)))
   }
 
   def andThen(verification: Verification[A]): Verification[A] = {
@@ -17,16 +17,14 @@ sealed trait Verification[A] {
     new VerificationGroup[A](Seq(beforeVerification, this))
   }
 
-  def withMessage(message: String): Verification[A] = this
-
   def from[B](f: B => A, path: String): Verification[B] = {
     new VerificationMap[A, B](this, f, path)
   }
 }
 
 object Verification {
-  def apply[A](message: String)(check: A => Boolean): Verification[A] = {
-    new ValueVerification(check, message)
+  def apply[A](definedVerification: DefinedVerification[A]): Verification[A] = {
+    new ValueVerification(definedVerification)
   }
 
   def none[A]: Verification[A] = new NoVerification[A]
@@ -37,6 +35,26 @@ object Verification {
   def all[A](verifications: Seq[Verification[A]]): Verification[A] = {
     new VerificationGroup(verifications)
   }
+
+  implicit def definedVerificationToVerification[A](definedVerification: DefinedVerification[A]): Verification[A] = {
+    new ValueVerification[A](definedVerification)
+  }
+}
+
+trait DefinedVerification[A] {
+  def verify(value: A): Option[Message]
+}
+
+abstract class SimpleVerification[A](message: String) extends DefinedVerification[A] {
+  override def verify(value: A): Option[Message] = {
+    if (isValid(value)) {
+      None
+    } else {
+      Some(Message(message))
+    }
+  }
+
+  def isValid(value: A): Boolean
 }
 
 final class VerificationGroup[A](verifications: Seq[Verification[A]]) extends Verification[A] {
@@ -64,16 +82,13 @@ final class NoVerification[A] extends Verification[A] {
   override private[native] def validate[B <: A](path: String, value: B): Validation[B] = Valid(value)
 }
 
-final class ValueVerification[A](check: A => Boolean, message: String) extends Verification[A] {
+final class ValueVerification[A](definedVerification: DefinedVerification[A]) extends Verification[A] {
   override private[native] def validate[B <: A](path: String, value: B): Validation[B] = {
-    if (check(value)) {
-      Valid(value)
-    } else {
-      Invalid(Error(path, message))
+    definedVerification.verify(value) match {
+      case Some(resultingMessage) => Invalid(Error(path, resultingMessage))
+      case None => Valid(value)
     }
   }
-
-  override def withMessage(message: String) = new ValueVerification(check, message)
 }
 
 final class ListVerification[A](verification: Verification[A] = Verification.none[A]) extends Verification[List[A]] {
