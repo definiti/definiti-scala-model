@@ -34,7 +34,7 @@ trait DefinedTypeBuilder {
     ScalaAST.ObjectDef(
       name = definedType.name,
       extendz = None,
-      body = Seq(generatePublicVerification(definedType)),
+      body = generatePublicVerification(definedType) +: buildJsonConverter(definedType),
       property = None
     )
   }

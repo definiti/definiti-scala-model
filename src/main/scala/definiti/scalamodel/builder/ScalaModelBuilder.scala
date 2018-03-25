@@ -40,7 +40,7 @@ class ScalaModelBuilder(val config: Configuration, val library: Library)
     }
     ScalaAST.Package(
       namespace.fullName,
-      imports = extractImportsFromNamespace(namespace),
+      imports = extractImportsFromNamespace(namespace) ++ jsonImports,
       elements = directElements ++ packageElements
     )
   }
