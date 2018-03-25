@@ -20,7 +20,7 @@ object AstHelper {
     ClassVal(
       name = s"${name}Verification",
       typ = s"Verification[${higherType}[${typ}]]",
-      body = New(s"${higherType}Verification", Seq(CallAttribute(SimpleExpression(typ), "allVerifications")))
+      body = New(s"${higherType}Verification", Seq.empty, Seq(CallAttribute(SimpleExpression(typ), "allVerifications")))
     )
   }
 

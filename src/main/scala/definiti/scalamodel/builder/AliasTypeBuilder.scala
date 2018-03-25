@@ -64,11 +64,12 @@ trait AliasTypeBuilder {
 
   private def generateVerification(aliasType: AliasType): ScalaAST.Statement = {
     val verifications = generateInheritedVerifications(aliasType) ++ generateInternalVerifications(aliasType)
-    ScalaAST.CallMethod(
-      "Verification",
-      "all",
-      verifications: _*
-    )
+    if (verifications.nonEmpty) {
+      ScalaAST.CallMethod("Verification", "all", verifications: _*)
+    } else {
+      ScalaAST.CallAttribute("Verification", s"none[${generateType(aliasType.alias).toCode}]")
+    }
+
   }
 
   private def generateInheritedVerifications(aliasType: AliasType): Seq[ScalaAST.Expression] = {

@@ -7,84 +7,32 @@ class NominalSpec extends EndToEndSpec {
   import NominalSpec._
 
   "The generator" should "generate a valid scala AST for a valid defined type" in {
-    val output = processFile("nominal.definedType")
-    output should beValidRoot(definedType)
+    processSample("nominal.definedType")
   }
 
   it should "generate a valid scala AST for a valid alias type" in {
-    val output = processFile("nominal.aliasType")
-    output should beValidRoot(aliasType)
+    processSample("nominal.aliasType")
   }
 
   it should "generate a valid scala AST for a valid verification" in {
-    val output = processFile("nominal.verification")
-    output should beValidRoot(verification)
+    processSample("nominal.verification")
   }
 
   it should "generate a valid scala AST for a valid named function" in {
-    val output = processFile("nominal.namedFunction")
-    output should beValidRoot(namedFunction)
+    processSample("nominal.namedFunction")
   }
 
   it should "generate nothing from an extended context" in {
-    val output = processFile("nominal.extendedContext")
+    val output = processFile("nominal.extendedContext.input")
     output should beValidRoot(extendedContext)
   }
 
   it should "generate a valid scala AST for a valid alias type in a package" in {
-    val output = processFile("nominal.package")
-    output should beValidRoot(packageAliasType)
+    processSample("nominal.package")
   }
 }
 
 
 object NominalSpec {
-  import definiti.scalamodel.helpers.AstHelper._
-
-  val definedType: Root = Root(
-    CaseClassDef("MyType", Parameter("myAttribute", "String")),
-    ObjectDef(
-      name = "MyType",
-      body = Seq(
-        attributeVerification("myAttribute", "String"),
-        typeVerifications("MyType"),
-        allVerifications("MyType", "myAttribute"),
-        applyCheck("MyType", "myAttribute" -> "String")
-      )
-    )
-  )
-
-  val aliasType: Root = Root(
-    ObjectDef(
-      name = "AliasString",
-      body = Seq(
-        typeVerifications("AliasString", "String"),
-        aliasApplyCheck("AliasString", "String")
-      )
-    )
-  )
-
-  val verification: Root = Root(
-    verificationObject("AlwaysTrue", "String", "Never fail", SimpleExpression("true"))
-  )
-
-  val namedFunction: Root = Root(
-    Def1("alwaysFalse", "Boolean", Seq.empty, SimpleExpression("false"))
-  )
-
   val extendedContext: Root = Root()
-
-  val packageAliasType: Root = Root(
-    Package(
-      "tst",
-      Seq.empty,
-      ObjectDef(
-        name = "AliasString",
-        body = Seq(
-          typeVerifications("AliasString", "String"),
-          aliasApplyCheck("AliasString", "String")
-        )
-      )
-    )
-  )
 }

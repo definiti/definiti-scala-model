@@ -31,7 +31,7 @@ class VerificationSeasonSamplesSpec extends FlatSpec with Matchers with Property
     } yield Season(Period(dates._2, dates._1), activities, List.empty)
 
     forAll(cases) { season =>
-      Season.seasonVerification.verify(season) should === (Invalid("period", Period.periodInvalidMessage))
+      Season.seasonVerification.verify(season) should === (Invalid("period", Message(Period.periodInvalidMessage)))
     }
   }
 
@@ -41,7 +41,7 @@ class VerificationSeasonSamplesSpec extends FlatSpec with Matchers with Property
     } yield Season(Period(dates._1, dates._2), List.empty, List.empty)
 
     forAll(cases) { season =>
-      Season.seasonVerification.verify(season) should === (Invalid("activities", Season.activitiesInvalidMessage))
+      Season.seasonVerification.verify(season) should === (Invalid("activities", Message(Season.activitiesInvalidMessage)))
     }
   }
 
@@ -53,7 +53,7 @@ class VerificationSeasonSamplesSpec extends FlatSpec with Matchers with Property
 
     forAll(cases) { season =>
       val result = Season.seasonVerification.verify(season)
-      val expectedErrors = season.activities.zipWithIndex.filter(_._1.isEmpty).map { case (_, n) => Error(s"activities[${n}]", Season.activityInvalidMessage) }
+      val expectedErrors = season.activities.zipWithIndex.filter(_._1.isEmpty).map { case (_, n) => Error(s"activities[${n}]", Message(Season.activityInvalidMessage)) }
       result should beValidation[Season](Invalid(expectedErrors))
     }
   }
@@ -76,8 +76,8 @@ class VerificationSeasonSamplesSpec extends FlatSpec with Matchers with Property
       List.empty
     )
     val expected = Invalid(
-      Error("period", Period.periodInvalidMessage),
-      Error("activities", Season.activitiesInvalidMessage)
+      Error("period", Message(Period.periodInvalidMessage)),
+      Error("activities", Message(Season.activitiesInvalidMessage))
     )
     Season.seasonVerification.verify(season) should beValidation[Season](expected)
   }
@@ -89,9 +89,9 @@ class VerificationSeasonSamplesSpec extends FlatSpec with Matchers with Property
       List.empty
     )
     val expected = Invalid(
-      Error("period", Period.periodInvalidMessage),
-      Error("activities[0]", Season.activityInvalidMessage),
-      Error("activities[1]", Season.activityInvalidMessage)
+      Error("period", Message(Period.periodInvalidMessage)),
+      Error("activities[0]", Message(Season.activityInvalidMessage)),
+      Error("activities[1]", Message(Season.activityInvalidMessage))
     )
     Season.seasonVerification.verify(season) should beValidation[Season](expected)
   }
@@ -103,10 +103,10 @@ class VerificationSeasonSamplesSpec extends FlatSpec with Matchers with Property
       List(SeasonOption(name = "", description = ""), SeasonOption(name = "valid", description = ""))
     )
     val expected = Invalid(
-      Error("period", Period.periodInvalidMessage),
-      Error("activities[0]", Season.activityInvalidMessage),
-      Error("activities[1]", Season.activityInvalidMessage),
-      Error("options[0].name", SeasonOption.nameInvalidMessage)
+      Error("period", Message(Period.periodInvalidMessage)),
+      Error("activities[0]", Message(Season.activityInvalidMessage)),
+      Error("activities[1]", Message(Season.activityInvalidMessage)),
+      Error("options[0].name", Message(SeasonOption.nameInvalidMessage))
     )
     Season.seasonVerification.verify(season) should beValidation[Season](expected)
   }
@@ -117,13 +117,13 @@ object VerificationSeasonSamplesSpec {
 
   object Season {
     val activityInvalidMessage = "The activity cannot be empty"
-    val nonEmptyActivityVerification = Verification(activityInvalidMessage) {
-      activity: String => activity.nonEmpty
+    val nonEmptyActivityVerification = new SimpleVerification[String](activityInvalidMessage) {
+      override def isValid(activity: String) = activity.nonEmpty
     }
 
     val activitiesInvalidMessage = "Please provide at least one activity"
-    val atLeastOneActivityVerification = Verification(activitiesInvalidMessage) {
-      activities: List[String] => activities.nonEmpty
+    val atLeastOneActivityVerification = new SimpleVerification[List[String]](activitiesInvalidMessage) {
+      override def isValid(activities: List[String]) = activities.nonEmpty
     }
 
     val activitiesVerification = Verification.all(new ListVerification[String](nonEmptyActivityVerification), atLeastOneActivityVerification)
@@ -131,7 +131,7 @@ object VerificationSeasonSamplesSpec {
     val optionsVerification = new ListVerification[SeasonOption](SeasonOption.seasonOptionVerification)
 
     val seasonVerification = Verification.all(
-      Period.periodVerification.from((x: Season) => x.period, "period"),
+      Verification.definedVerificationToVerification(Period.periodVerification).from((x: Season) => x.period, "period"),
       activitiesVerification.from((x: Season) => x.activities, "activities"),
       optionsVerification.from((x: Season) => x.options, "options")
     )
@@ -141,8 +141,8 @@ object VerificationSeasonSamplesSpec {
 
   object Period {
     val periodInvalidMessage = "The start of the period should be before the end"
-    val periodVerification = Verification(periodInvalidMessage) {
-      period: Period => period.start.isBefore(period.end) || period.start.isEqual(period.end)
+    val periodVerification = new SimpleVerification[Period](periodInvalidMessage) {
+      override def isValid(period: Period) = period.start.isBefore(period.end) || period.start.isEqual(period.end)
     }
   }
 
@@ -150,11 +150,11 @@ object VerificationSeasonSamplesSpec {
 
   object SeasonOption {
     val nameInvalidMessage = "The option name is empty"
-    val nameVerification = Verification(nameInvalidMessage) {
-      name: String => name.nonEmpty
+    val nameVerification = new SimpleVerification[String](nameInvalidMessage) {
+      override def isValid(name: String) = name.nonEmpty
     }
 
-    val seasonOptionVerification = Verification.all(nameVerification.from((x: SeasonOption) => x.name, "name"))
+    val seasonOptionVerification = Verification.all(Verification.definedVerificationToVerification(nameVerification).from((x: SeasonOption) => x.name, "name"))
   }
 
   val atLeastOneEmptyActivityGen = for {
