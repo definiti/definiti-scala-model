@@ -60,7 +60,7 @@ trait CommonBuilder {
       typ = generateType(definedFunction.body.returnType),
       generics = definedFunction.genericTypes,
       parameters = definedFunction.parameters.map(generateParameter),
-      body = Some(generateExpression(definedFunction.body)),
+      body = generateExpression(definedFunction.body),
       property = property
     )
   }

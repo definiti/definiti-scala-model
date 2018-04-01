@@ -83,8 +83,15 @@ object ScalaCodeGenerator {
   def generateCallAttribute(ast: ScalaAST.CallAttribute, indent: String): String =
     s"${inParens(ast.target, indent)}.${ast.name}"
 
-  def generateCallMethod(ast: ScalaAST.CallMethod, indent: String): String =
-    s"${inParens(ast.target, indent)}.${ast.name}${inParensOrBlock(ast.arguments, indent)}"
+  def generateCallMethod(ast: ScalaAST.CallMethod, indent: String): String = {
+    val target = s"${inParens(ast.target, indent)}"
+    val method = s"${ast.name}"
+    val generics = generateTypeGenerics(ast.generics)
+    val arguments =
+      if (ast.arguments.nonEmpty || ast.forceParenthesis) inParensOrBlock(ast.arguments, indent)
+      else ""
+    s"${target}.${method}${generics}${arguments}"
+  }
 
   def generateCallFunction(ast: ScalaAST.CallFunction, indent: String): String =
     s"${generateExpression(ast.target, indent)}${inParensOrBlock(ast.arguments, indent)}"
@@ -116,6 +123,14 @@ object ScalaCodeGenerator {
   private def generateGenerics(generics: Seq[String]): String = {
     if (generics.nonEmpty) {
       generics.mkString("[", ",", "]")
+    } else {
+      ""
+    }
+  }
+
+  private def generateTypeGenerics(generics: Seq[ScalaAST.Type]): String = {
+    if (generics.nonEmpty) {
+      generics.map(_.toCode).mkString("[", ",", "]")
     } else {
       ""
     }

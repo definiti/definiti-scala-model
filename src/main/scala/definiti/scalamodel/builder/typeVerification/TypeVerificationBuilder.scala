@@ -17,14 +17,7 @@ trait TypeVerificationBuilder
   def generateGroupVerification(typ: String, verifications: Seq[ScalaAST.Expression]): Option[ScalaAST.Expression] = {
     verifications match {
       case Nil => None
-      case _ =>
-        Some(
-          ScalaAST.CallMethod(
-            target = ScalaAST.SimpleExpression("Verification"),
-            name = "all",
-            arguments = verifications
-          )
-        )
+      case _ => ScalaAST.CallMethod("Verification", "all", verifications)
     }
   }
 
@@ -36,9 +29,9 @@ trait TypeVerificationBuilder
 
     ScalaAST.ObjectDef(
       name = name,
-      extendz = Some(typeVerificationBuilderStrategy.extendz),
-      body = typeVerificationBuilderStrategy.messageVal.toSeq :+ typeVerificationBuilderStrategy.verificationDef,
-      property = Some("private")
+      extendz = typeVerificationBuilderStrategy.extendz,
+      body = typeVerificationBuilderStrategy.messageVal ++ typeVerificationBuilderStrategy.verificationDef,
+      property = "private"
     )
   }
 
@@ -57,11 +50,11 @@ trait TypeVerificationBuilder
 
     ScalaAST.ObjectDef(
       name = name,
-      extendz = Some(typeVerificationBuilderStrategy.extendz),
+      extendz = typeVerificationBuilderStrategy.extendz,
       body =
-        typeVerificationBuilderStrategy.messageVal.toSeq :+
+        typeVerificationBuilderStrategy.messageVal ++
           typeVerificationBuilderStrategy.verificationDef.copy(
-            parameters = Seq(typeVerificationBuilderStrategy.verificationDef.parameters.head)
+            parameters = typeVerificationBuilderStrategy.verificationDef.parameters.head
           ),
       property = None
     )
@@ -79,14 +72,14 @@ trait TypeVerificationBuilder
     override def extendz: ScalaAST.Extends = {
       ScalaAST.Extends(
         typ = ScalaAST.Type("SimpleVerification", generateTypeVerificationType(typeVerification)),
-        parameters = Seq(ScalaAST.StringExpression(message.message))
+        parameters = ScalaAST.StringExpression(message.message)
       )
     }
 
     override def messageVal: Option[ScalaAST.ClassVal] = None
 
     override def verificationDef: ScalaAST.Def1 = {
-      generateDef("isValid", typeVerification.function.copy(genericTypes = Seq.empty), Some("override"))
+      generateDef("isValid", typeVerification.function.copy(genericTypes = Seq.empty), "override")
     }
   }
 
@@ -99,18 +92,16 @@ trait TypeVerificationBuilder
     }
 
     override def messageVal: Option[ScalaAST.ClassVal] = {
-      Some(
-        ScalaAST.ClassVal(
-          name = "message",
-          typ = "String",
-          body = Seq(ScalaAST.StringExpression(message.message)),
-          isPrivate = true
-        )
+      ScalaAST.ClassVal(
+        name = "message",
+        typ = "String",
+        body = ScalaAST.StringExpression(message.message),
+        isPrivate = true
       )
     }
 
     override def verificationDef: ScalaAST.Def1 = {
-      generateDef("verify", typeVerification.function.copy(genericTypes = Seq.empty), Some("override"))
+      generateDef("verify", typeVerification.function.copy(genericTypes = Seq.empty), "override")
     }
   }
 }

@@ -7,7 +7,8 @@ trait VerificationBuilder {
   self: ScalaModelBuilder =>
 
   def generateVerification(verification: Verification): Seq[ScalaAST.TopLevelElement] = {
-    verification.comment.map(comment => ScalaAST.Comment(comment.trim)).toSeq :+ generateVerificationClass(verification)
+    verification.comment.map(comment => ScalaAST.Comment(comment.trim)) ++
+      generateVerificationClass(verification)
   }
 
   private def generateVerificationClass(verification: Verification): ScalaAST.TopLevelElement = {
@@ -15,9 +16,9 @@ trait VerificationBuilder {
     ScalaAST.ClassDef(
       name = verification.name,
       generics = verification.function.genericTypes,
-      extendz = Some(verificationBuilderStrategy.extendz),
-      parameters = verification.parameters.map(generateParameter) :+ verificationBuilderStrategy.messageParameter,
-      body = Seq(verificationBuilderStrategy.verificationDef),
+      extendz = verificationBuilderStrategy.extendz,
+      parameters = verification.parameters.map(generateParameter) ++ verificationBuilderStrategy.messageParameter,
+      body = verificationBuilderStrategy.verificationDef,
       property = None,
       privateConstructor = false
     )
@@ -49,12 +50,12 @@ trait VerificationBuilder {
     override def extendz: ScalaAST.Extends = {
       ScalaAST.Extends(
         typ = ScalaAST.Type("SimpleVerification", generateVerificationType(verification)),
-        parameters = Seq(ScalaAST.SimpleExpression("message"))
+        parameters = ScalaAST.SimpleExpression("message")
       )
     }
 
     override def verificationDef: ScalaAST.Def1 = {
-      generateDef("isValid", verification.function.copy(genericTypes = Seq.empty), Some("override"))
+      generateDef("isValid", verification.function.copy(genericTypes = Seq.empty), "override")
     }
 
     override def messageParameter: ScalaAST.Parameter = {
@@ -75,7 +76,7 @@ trait VerificationBuilder {
     }
 
     override def verificationDef: ScalaAST.Def1 = {
-      generateDef("verify", verification.function.copy(genericTypes = Seq.empty), Some("override"))
+      generateDef("verify", verification.function.copy(genericTypes = Seq.empty), "override")
     }
 
     override def messageParameter: ScalaAST.Parameter = {

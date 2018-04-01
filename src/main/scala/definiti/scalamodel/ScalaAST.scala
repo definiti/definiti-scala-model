@@ -102,33 +102,19 @@ object ScalaAST {
     def apply(target: String, name: String): CallAttribute = new CallAttribute(SimpleExpression(target), name)
   }
 
-  case class CallMethod(target: Expression, name: String, arguments: Seq[Expression]) extends Expression with Unambiguous
-
-  object CallMethod {
-    def apply(target: String, name: String): CallMethod = {
-      new CallMethod(ScalaAST.SimpleExpression(target), name, Seq.empty)
-    }
-    def apply(target: String, name: String, arguments: Expression*): CallMethod = {
-      new CallMethod(ScalaAST.SimpleExpression(target), name, arguments)
-    }
-    def apply(target: String, name: String, arguments: String*)(implicit dummyImplicit: DummyImplicit): CallMethod = {
-      new CallMethod(ScalaAST.SimpleExpression(target), name, arguments.map(SimpleExpression))
-    }
-  }
+  case class CallMethod(
+    target: Expression,
+    name: String,
+    arguments: Seq[Expression] = Seq.empty,
+    forceParenthesis: Boolean = false,
+    generics: Seq[Type] = Seq.empty
+  ) extends Expression with Unambiguous
 
   case class CallFunction(target: Expression, arguments: Seq[Expression]) extends Expression with Unambiguous
 
   object CallFunction {
-    def apply(target: String): CallFunction = {
-      new CallFunction(SimpleExpression(target), Seq.empty)
-    }
-
     def apply(target: String, arguments: Expression*): CallFunction = {
       new CallFunction(SimpleExpression(target), arguments)
-    }
-
-    def apply(target: String, arguments: String*)(implicit dummyImplicit: DummyImplicit): CallFunction = {
-      new CallFunction(SimpleExpression(target), arguments.map(SimpleExpression))
     }
   }
 
@@ -227,16 +213,12 @@ object ScalaAST {
 
   case class ClassVal(name: String, typ: String, body: Seq[Statement], isLazy: Boolean = false, isPrivate: Boolean = false, isImplicit: Boolean = false) extends Statement
 
-  object ClassVal {
-    def apply(name: String, typ: String, body: Statement*): ClassVal = new ClassVal(name, typ, body)
-  }
-
   case class TypeDef(name: String, typ: String) extends Statement
 
   case class Case(pattern: String, body: Statement)
   case class Match(expr: Expression, cases: Seq[Case]) extends Statement
 
-  case class Type(name: String, generics: Seq[Type]) extends Statement {
+  case class Type(name: String, generics: Seq[Type] = Seq.empty) {
     // FIXME: We keep this code generation here for compatibility.
     // An improvement of the ScalaAST is needed to always work with Type and not String.
     def toCode: String = {
@@ -245,12 +227,6 @@ object ScalaAST {
       } else {
         name
       }
-    }
-  }
-
-  object Type {
-    def apply(name: String, generics: Type*)(implicit dummyImplicit: DummyImplicit): Type = {
-      new Type(name, generics)
     }
   }
 }

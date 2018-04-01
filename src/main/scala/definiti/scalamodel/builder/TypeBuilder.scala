@@ -50,7 +50,7 @@ trait TypeBuilder {
   def generateType(typeReference: AbstractTypeReference): String = {
     typeReference match {
       case typeReference: TypeReference =>
-        generateScalaType(typeReference).toCode
+        generateScalaType(typeReference)
 
       case LambdaReference(inputTypes, outputType) =>
         def generateOneType(typeReference: TypeReference): String = {
@@ -60,6 +60,8 @@ trait TypeBuilder {
         }
 
         s"(${inputTypes.map(generateOneType)}) => ${generateOneType(outputType)}"
+
+      case _ => sys.error(s"Unexpected type ${typeReference}")
     }
   }
 

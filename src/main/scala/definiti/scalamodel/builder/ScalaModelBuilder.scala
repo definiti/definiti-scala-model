@@ -7,9 +7,6 @@ import definiti.scalamodel.{Configuration, ScalaAST}
 class ScalaModelBuilder(val config: Configuration, val library: Library)
   extends CommonBuilder
     with ClassDefinitionBuilder
-    with AliasTypeBuilder
-    with DefinedTypeBuilder
-    with EnumBuilder
     with ExpressionBuilder
     with ImportExtractor
     with JsonBuilder
@@ -45,4 +42,17 @@ class ScalaModelBuilder(val config: Configuration, val library: Library)
       elements = directElements ++ packageElements
     )
   }
+
+  implicit def valueToValueSeq[A](value: A): Seq[A] = Seq(value)
+
+  implicit def valueToValueOption[A](value: A): Option[A] = Some(value)
+
+  implicit def optionToSeq[A](option: Option[A]): Seq[A] = option match {
+    case Some(value) => Seq(value)
+    case None => Nil
+  }
+
+  implicit def typeToString(typ: ScalaAST.Type): String = typ.toCode
+
+  implicit def stringToExpression(rawStatement: String): ScalaAST.Expression = ScalaAST.SimpleExpression(rawStatement)
 }

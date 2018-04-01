@@ -11,22 +11,22 @@ trait AtomicVerificationBuilder {
 
   def generatePublicAtomicVerification(aliasOrDefinedType: AliasOrDefinedType): ScalaAST.Statement = {
     val body = ScalaAST.Block(
-      generateAtomicInternalVerificationObjects(aliasOrDefinedType) :+
+      generateAtomicInternalVerificationObjects(aliasOrDefinedType) ++
         generateVerification(aliasOrDefinedType)
     ).simplify
     if (aliasOrDefinedType.parameters.nonEmpty || aliasOrDefinedType.genericTypes.nonEmpty) {
       ScalaAST.Def1(
         name = "verification",
-        typ = ScalaAST.Type("Verification", generateType(aliasOrDefinedType.internal)).toCode,
+        typ = ScalaAST.Type("Verification", generateType(aliasOrDefinedType.internal)),
         generics = aliasOrDefinedType.genericTypes,
         parameters = aliasOrDefinedType.parameters.map(generateParameter),
-        body = Some(body),
+        body = body,
         property = None
       )
     } else {
       ScalaAST.ClassVal(
         name = "verification",
-        typ = ScalaAST.Type("Verification", generateType(aliasOrDefinedType.internal)).toCode,
+        typ = ScalaAST.Type("Verification", generateType(aliasOrDefinedType.internal)),
         body = body
       )
     }
@@ -41,8 +41,8 @@ trait AtomicVerificationBuilder {
     val internalVerifications = generateAtomicInternalVerifications(aliasOrDefinedType)
     val verifications = attributeVerifications ++ inheritedVerifications ++ internalVerifications
     verifications match {
-      case Nil => ScalaAST.SimpleExpression(s"Verification.none[${generateType(aliasOrDefinedType).toCode}]")
-      case list => ScalaAST.CallMethod("Verification", "all", list: _*)
+      case Nil => ScalaAST.CallMethod("Verification", "none", generics = generateType(aliasOrDefinedType))
+      case list => ScalaAST.CallMethod("Verification", "all", list)
     }
   }
 
@@ -51,7 +51,7 @@ trait AtomicVerificationBuilder {
     val directVerifications = attributeDefinition.verifications.map(generateVerificationCall(_, definedType))
     val deepVerification = generateDeepVerification(attributeDefinition.typeDeclaration)
     val verifications = typeVerification ++ directVerifications ++ deepVerification
-    val groupVerificationOpt = generateGroupVerification(attributeDefinition.typeDeclaration, verifications.toSeq)
+    val groupVerificationOpt = generateGroupVerification(attributeDefinition.typeDeclaration, verifications)
     val verificationFromType = groupVerificationOpt.map { groupVerification =>
       ScalaAST.CallMethod(
         target = groupVerification,
@@ -88,9 +88,9 @@ trait AtomicVerificationBuilder {
     val innerVerification = typeDeclaration.genericTypes.flatMap(generateTypeVerificationCall)
     if (innerVerification.nonEmpty) {
       if (isList(typeDeclaration)) {
-        Some(ScalaAST.New(s"ListVerification", Seq.empty, innerVerification))
+        ScalaAST.New(s"ListVerification", Seq.empty, innerVerification)
       } else if (isOption(typeDeclaration)) {
-        Some(ScalaAST.New(s"OptionVerification", Seq.empty, innerVerification))
+        ScalaAST.New(s"OptionVerification", Seq.empty, innerVerification)
       } else {
         None
       }

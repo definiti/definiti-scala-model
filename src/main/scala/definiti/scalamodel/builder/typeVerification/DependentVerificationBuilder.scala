@@ -15,9 +15,9 @@ trait DependentVerificationBuilder {
   }
 
   private def generatePublicDependentVerification(aliasOrDefinedType: AliasOrDefinedType, name: String): ScalaAST.Statement = {
-    val typ = ScalaAST.Type("Verification", generateType(aliasOrDefinedType)).toCode
+    val typ = ScalaAST.Type("Verification", generateType(aliasOrDefinedType))
     val body = ScalaAST.Block(
-      generateInternalVerificationObjects(aliasOrDefinedType, name) :+
+      generateInternalVerificationObjects(aliasOrDefinedType, name) ++
         generateVerification(aliasOrDefinedType, name)
     ).simplify
     if (aliasOrDefinedType.parameters.nonEmpty || aliasOrDefinedType.genericTypes.nonEmpty) {
@@ -27,7 +27,7 @@ trait DependentVerificationBuilder {
         generics = aliasOrDefinedType.genericTypes,
         parameters1 = aliasOrDefinedType.parameters.map(generateParameter),
         parameters2 = extractDependentTypeParameters(aliasOrDefinedType, name),
-        body = Some(body),
+        body = body,
         property = None
       )
     } else {
@@ -36,7 +36,7 @@ trait DependentVerificationBuilder {
         typ = typ,
         generics = Seq.empty,
         parameters = extractDependentTypeParameters(aliasOrDefinedType, name),
-        body = Some(body),
+        body = body,
         property = None
       )
     }
@@ -58,29 +58,25 @@ trait DependentVerificationBuilder {
     }
     val internalVerifications = generateInternalVerifications(aliasOrDefinedType, name)
     val verifications = attributeVerifications ++ internalVerifications
-    ScalaAST.CallMethod(
-      "Verification",
-      "all",
-      verifications: _*
-    )
+    ScalaAST.CallMethod("Verification", "all", verifications)
   }
 
   private def generateAttributeVerifications(attributeDefinition: AttributeDefinition, definedType: DefinedType, name: String): Option[ScalaAST.Expression] = {
     val typeVerification = generateTypeVerificationCall(attributeDefinition.typeDeclaration, name)
     val deepVerification = generateDeepVerification(attributeDefinition.typeDeclaration, name)
     val verifications = typeVerification ++ deepVerification
-    val groupVerificationOpt = generateGroupVerification(attributeDefinition.typeDeclaration, verifications.toSeq)
-    val verificationFromType = groupVerificationOpt.map { groupVerification =>
+    val groupVerificationOpt = generateGroupVerification(attributeDefinition.typeDeclaration, verifications)
+    groupVerificationOpt.map { groupVerification =>
       ScalaAST.CallMethod(
         target = groupVerification,
-        name = s"from[${generateType(definedType).toCode}]",
+        name = s"from",
         arguments = Seq(
-          ScalaAST.SimpleExpression(s"_.${attributeDefinition.name}"),
+          ScalaAST.CallAttribute("_", attributeDefinition.name),
           ScalaAST.StringExpression(attributeDefinition.name)
-        )
+        ),
+        generics = generateType(definedType)
       )
     }
-    verificationFromType
   }
 
   private def generateTypeVerificationCall(typeDeclaration: TypeDeclaration, name: String): Option[ScalaAST.Expression] = {
@@ -89,17 +85,19 @@ trait DependentVerificationBuilder {
         if (typeDeclaration.parameters.nonEmpty) {
           Some(ScalaAST.CallFunction(
             target = ScalaAST.CallMethod(
-              target = ScalaAST.SimpleExpression(StringUtils.lastPart(typeDeclaration.typeName)),
-              name = s"${name}${generateGenericTypes(typeDeclaration.genericTypes)}",
-              arguments = typeDeclaration.parameters.map(generateExpression)
+              target = StringUtils.lastPart(typeDeclaration.typeName),
+              name = name,
+              arguments = typeDeclaration.parameters.map(generateExpression),
+              generics = typeDeclaration.genericTypes.map(generateType)
             ),
             arguments = extractDependentTypeParameters(x, name).map(_.name).map(ScalaAST.SimpleExpression)
           ))
         } else {
           Some(ScalaAST.CallMethod(
-            target = ScalaAST.SimpleExpression(StringUtils.lastPart(typeDeclaration.typeName)),
-            name = s"${name}${generateGenericTypes(typeDeclaration.genericTypes)}",
-            arguments = extractDependentTypeParameters(x, name).map(_.name).map(ScalaAST.SimpleExpression)
+            target = StringUtils.lastPart(typeDeclaration.typeName),
+            name = name,
+            arguments = extractDependentTypeParameters(x, name).map(_.name).map(ScalaAST.SimpleExpression),
+            generics = typeDeclaration.genericTypes.map(generateType)
           ))
         }
       case _ => None
@@ -110,9 +108,9 @@ trait DependentVerificationBuilder {
     val innerVerification = typeDeclaration.genericTypes.flatMap(generateTypeVerificationCall(_, name))
     if (innerVerification.nonEmpty) {
       if (isList(typeDeclaration)) {
-        Some(ScalaAST.New(s"ListVerification", Seq.empty, innerVerification))
+        ScalaAST.New(s"ListVerification", Seq.empty, innerVerification)
       } else if (isOption(typeDeclaration)) {
-        Some(ScalaAST.New(s"OptionVerification", Seq.empty, innerVerification))
+        ScalaAST.New(s"OptionVerification", Seq.empty, innerVerification)
       } else {
         None
       }
