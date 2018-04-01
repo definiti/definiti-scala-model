@@ -1,0 +1,40 @@
+package my
+
+type Parent {
+  date: Date
+  child: Child
+
+  verify universe(now: Date) {
+    "Date should be after now"
+    (nominal) => {
+      nominal.date.isAfter(now)
+    }
+  }
+}
+
+type Child {
+  date: Date
+  grandChild: GrandChild
+
+  verify universe(now: Date) {
+    "Date should be after tomorrow"
+    (child) => {
+      child.date.isAfter(now.plusDays(1))
+    }
+  }
+}
+
+type GrandChild {
+  value: Number
+
+  verify universe(minimalFromConfig: Number) {
+    message("grandChild.universe", Number, Number)
+    (grandChild) => {
+      if (grandChild.value >= minimalFromConfig) {
+        ok
+      } else {
+        ko(grandChild.value, minimalFromConfig)
+      }
+    }
+  }
+}

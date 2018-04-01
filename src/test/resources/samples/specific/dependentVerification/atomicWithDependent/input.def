@@ -1,0 +1,19 @@
+package my
+
+type Nominal {
+  date: Date
+
+  verify {
+    "Timestamp should be upper than 0"
+    (nominal) => {
+      nominal.date.timestamp > 0
+    }
+  }
+
+  verify universe(now: Date) {
+    "Date should be after now"
+    (nominal) => {
+      nominal.date.isAfter(now)
+    }
+  }
+}

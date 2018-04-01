@@ -1,7 +1,7 @@
 package definiti.scalamodel.generator
 
 import definiti.scalamodel.ScalaAST
-import definiti.scalamodel.ScalaAST.{Expression, Extends, Statement}
+import definiti.scalamodel.ScalaAST.{Block, Expression, Extends, Statement}
 
 object ScalaCodeGenerator {
 
@@ -210,7 +210,10 @@ object ScalaCodeGenerator {
     if (statements.isEmpty) {
       "{}"
     } else if (statements.lengthCompare(1) == 0) {
-      generateStatement(statements.head, innerIndent)
+      statements.head match {
+        case block: Block => generateStatement(block, indent)
+        case statement => generateStatement(statement, innerIndent)
+      }
     } else {
       statements
         .map(a => generateStatement(a, innerIndent))

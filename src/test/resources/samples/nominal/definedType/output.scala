@@ -4,6 +4,6 @@ import java.time.LocalDateTime
 package object root {
   case class MyType(myAttribute: String)
   object MyType {
-    val verification: Verification[MyType] = Verification.all()
+    val verification: Verification[MyType] = Verification.none[MyType]
   }
 }

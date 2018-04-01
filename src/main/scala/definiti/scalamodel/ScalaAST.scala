@@ -132,7 +132,12 @@ object ScalaAST {
     }
   }
 
-  case class Block(body: Seq[Statement]) extends Expression
+  case class Block(body: Seq[Statement]) extends Expression {
+    def simplify: Expression = body match {
+      case (head: Expression) :: Nil => head
+      case _ => this
+    }
+  }
 
   object Block {
     def apply(body: Statement*)(implicit dummyImplicit: DummyImplicit): Block = new Block(body)

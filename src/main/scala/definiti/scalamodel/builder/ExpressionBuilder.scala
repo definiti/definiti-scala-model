@@ -37,7 +37,7 @@ trait ExpressionBuilder {
     case attributeCall: AttributeCall =>
       generateAttributeCall(attributeCall)
     case combinedExpression: CombinedExpression =>
-      ScalaAST.Block(combinedExpression.parts.map(generateExpression))
+      ScalaAST.Block(combinedExpression.parts.map(generateExpression)).simplify
     case condition: Condition =>
       condition.onFalse
         .map(onFalse => ScalaAST.IfThenElse(generateExpression(condition.condition), generateExpression(condition.onTrue), generateExpression(onFalse)))

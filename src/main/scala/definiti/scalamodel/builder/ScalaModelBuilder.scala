@@ -1,6 +1,7 @@
 package definiti.scalamodel.builder
 
 import definiti.core.ast.{Library, Namespace, Root}
+import definiti.scalamodel.builder.typeVerification.TypeVerificationBuilder
 import definiti.scalamodel.{Configuration, ScalaAST}
 
 class ScalaModelBuilder(val config: Configuration, val library: Library)

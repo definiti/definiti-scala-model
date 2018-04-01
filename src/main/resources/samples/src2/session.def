@@ -1,0 +1,45 @@
+package my.session
+
+import my.period.Period
+
+type Session {
+  name: String
+  date: Date
+  opening: ReservationOpening
+  x: IDoNotKnowWhatKind(0)
+
+  verify afterNow(now: Date) {
+    "The date should be after now"
+    (session) => {
+      session.date.isAfter(now)
+    }
+  }
+}
+
+type ReservationOpening = Period {
+  verify afterNow(now: Date) {
+    "The reservation opening should be after now"
+    (reservationOpening) => {
+      reservationOpening.start.isAfter(now)
+    }
+  }
+}
+
+type IDoNotKnowWhatKind(min: Number) {
+  value: Number
+  date: Date
+
+  verify {
+    "value >= min"
+    (iDoNotKnowWhatKind) => {
+      iDoNotKnowWhatKind.value >= min
+    }
+  }
+
+  verify afterNow(now: Date) {
+    "The date should be after now"
+    (iDoNotKnowWhatKind) => {
+      iDoNotKnowWhatKind.date.isAfter(now)
+    }
+  }
+}

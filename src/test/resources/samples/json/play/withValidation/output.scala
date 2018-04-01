@@ -6,7 +6,7 @@ import definiti.native.JsonPlaySupport._
 package object my {
   case class MyFirstType(myAttribute: String)
   object MyFirstType {
-    val verification: Verification[MyFirstType] = Verification.all()
+    val verification: Verification[MyFirstType] = Verification.none[MyFirstType]
     val rawFormat: OFormat[MyFirstType] = Json.format[MyFirstType]
     implicit val format: OFormat[MyFirstType] = formatWithValidation(rawFormat, verification)
   }
@@ -22,14 +22,12 @@ package object my {
   }
   case class MyThirdType(myAttribute: String)
   object MyThirdType {
-    val verification: Verification[MyThirdType] = Verification.all()
+    val verification: Verification[MyThirdType] = Verification.none[MyThirdType]
     val rawFormat: OFormat[MyThirdType] = Json.format[MyThirdType]
     implicit val format: OFormat[MyThirdType] = formatWithValidation(rawFormat, verification)
   }
   object AliasList {
-    def verification[A](): Verification[List[A]] = {
-      Verification.none[List[A]]
-    }
+    def verification[A](): Verification[List[A]] = Verification.none[List[A]]
   }
   object ListOfThird {
     val verification: Verification[List[MyThirdType]] = Verification.none[List[MyThirdType]]

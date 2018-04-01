@@ -1,0 +1,22 @@
+package my
+
+type Parent {
+  date: Date
+  child: Child
+}
+
+type Child {
+  date: Date
+  grandChild: GrandChild
+}
+
+type GrandChild {
+  date: Date
+
+  verify universe(now: Date) {
+    "Date should be after yesterday"
+    (grandChild) => {
+      grandChild.date.isAfter(now.minusDays(1))
+    }
+  }
+}
