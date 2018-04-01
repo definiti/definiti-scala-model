@@ -41,3 +41,14 @@ verification NonEmptyList {
 def nonEmptyList[A](list: List[A]): Boolean => {
   list.nonEmpty()
 }
+
+verification IsStringOfLength(length: Number) {
+  message("is.string.of.length", Number, Number)
+  (string: String) => {
+    if (string.length < length) {
+      ok
+    } else {
+      ko(string.length, length)
+    }
+  }
+}

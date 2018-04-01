@@ -1,0 +1,21 @@
+package my
+
+type MyFirstType {
+  myAttribute: String
+}
+
+type MySecondType {
+  myFirstAttribute: Number
+  mySecondAttribute: MyFirstType
+  myThirdAttribute: List[MyFirstType]
+  myFourthAttribute: Option[MyFirstType]
+  myFifthAttribute: AliasList[MyThirdType]
+  mySixthAttribute: ListOfThird
+}
+
+type MyThirdType {
+  myAttribute: String
+}
+
+type AliasList[A] = List[A]
+type ListOfThird = List[MyThirdType]

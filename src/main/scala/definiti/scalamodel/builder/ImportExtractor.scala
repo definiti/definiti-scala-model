@@ -46,6 +46,10 @@ trait ImportExtractor {
     }
   }
 
+  private def extractFromTypeDeclaration(typeDeclaration: TypeDeclaration): Seq[String] = {
+    typeDeclaration.typeName +: typeDeclaration.genericTypes.flatMap(extractFromTypeDeclaration)
+  }
+
   private def extractFromNamedFunction(namedFunction: NamedFunction): Seq[String] = {
     val parameterTypes = namedFunction.parameters.flatMap(extractFromParameter)
     val bodyTypes = extractFromExpression(namedFunction.body)
@@ -63,7 +67,7 @@ trait ImportExtractor {
   }
 
   private def extractFromAliasType(aliasType: AliasType): Seq[String] = {
-    val aliasTypes = extractFromTypeReference(aliasType.alias)
+    val aliasTypes = extractFromTypeDeclaration(aliasType.alias)
     val verificationTypes = aliasType.inherited.flatMap(extractFromVerificationReference)
     (aliasTypes ++ verificationTypes)
       .filterNot(aliasType.genericTypes.contains)
@@ -82,7 +86,7 @@ trait ImportExtractor {
   }
 
   private def extractFromAttribute(attributeDefinition: AttributeDefinition): Seq[String] = {
-    val attributeType = extractFromTypeReference(attributeDefinition.typeReference)
+    val attributeType = extractFromTypeDeclaration(attributeDefinition.typeDeclaration)
     val verificationTypes = attributeDefinition.verifications.flatMap(extractFromVerificationReference)
     attributeType ++ verificationTypes
   }

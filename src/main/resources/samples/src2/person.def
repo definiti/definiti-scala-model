@@ -4,6 +4,7 @@ import my.verifications.NonEmptyString
 import my.verifications.NonBlank
 import my.verifications.PhoneNumber
 import my.verifications.NonEmptyList
+import my.verifications.IsStringOfLength
 import my.functions.isEmail
 
 type Person {
@@ -35,8 +36,49 @@ type Contact {
 }
 
 type Address {
-  street: String
-  city: String
+  street: String verifying IsStringOfLength(10)
+  zipCode: StringOfLength(5)
+  city: City
+}
+
+type MultiContacts(minimum: Number) {
+  email: List[String]
+  phones: List[Phone]
+
+  verify {
+    message("multi.contact.email", Number, Number)
+    (multiContact) => {
+      if (multiContact.email.size >= minimum) {
+        ok
+      } else {
+        ko(multiContact.email.size, minimum)
+      }
+    }
+  }
+}
+
+type StringOfLength(length: Number) = String verifying IsStringOfLength(length)
+
+type StringOfBoundedLength(min: Number, max: Number) = String {
+  verify {
+    message("string.of.bounded.length", Number, Number)
+    (string) => {
+      if (min <= string.length && string.length <= max) {
+        ok
+      } else {
+        ko(min, max)
+      }
+    }
+  }
+}
+
+type City = String {
+  verify {
+    "The city should start with an uppercase letter"
+    (city) => {
+      city.substring(0, 1) == city.substring(0, 1).toUpperCase()
+    }
+  }
 }
 
 type RequiredString = String verifying NonEmptyString

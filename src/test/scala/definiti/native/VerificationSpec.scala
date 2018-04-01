@@ -8,6 +8,14 @@ import org.scalatest.{FlatSpec, Matchers}
 import scala.util.Random
 
 class VerificationSpec extends FlatSpec with Matchers with PropertyChecks with ValidationMatcher {
+  private def isPositiveVerification(message: String) = {
+    new ValueVerification(
+      new SimpleVerification[Int](message) {
+        override def isValid(value: Int): Boolean = value > 0
+      }
+    )
+  }
+
   "NoVerification.verify" should "return a Valid value" in {
     forAll(Generators.anyString) { value =>
       new NoVerification[String].verify(value) should ===(Valid(value))
@@ -21,7 +29,7 @@ class VerificationSpec extends FlatSpec with Matchers with PropertyChecks with V
     } yield (n, message)
 
     forAll(cases) { case (n, message) =>
-      new ValueVerification[Int](x => x > 0, message).verify(n) should === (Valid(n))
+      isPositiveVerification(message).verify(n) should ===(Valid(n))
     }
   }
 
@@ -32,7 +40,7 @@ class VerificationSpec extends FlatSpec with Matchers with PropertyChecks with V
     } yield (n, message)
 
     forAll(cases) { case (n, message) =>
-      new ValueVerification[Int](x => x > 0, message).verify(n) should === (Invalid.root(message))
+      isPositiveVerification(message).verify(n) should ===(Invalid.root(Message(message)))
     }
   }
 
@@ -43,7 +51,7 @@ class VerificationSpec extends FlatSpec with Matchers with PropertyChecks with V
     } yield (values, message)
 
     forAll(cases) { case (values, message) =>
-      val result = new ListVerification[Int](new ValueVerification(x => x > 0, message)).verify(values)
+      val result = new ListVerification[Int](isPositiveVerification(message)).verify(values)
       result should === (Valid(values))
     }
   }
@@ -55,8 +63,8 @@ class VerificationSpec extends FlatSpec with Matchers with PropertyChecks with V
     } yield (values, message)
 
     forAll(cases) { case (values, message) =>
-      val result = new ListVerification[Int](new ValueVerification(x => x > 0, message)).verify(values)
-      val expectedErrors = values.indices.map{ index => Error(s"[${index}]", message) }
+      val result = new ListVerification[Int](isPositiveVerification(message)).verify(values)
+      val expectedErrors = values.indices.map { index => Error(s"[${index}]", Message(message)) }
       result should beValidation[List[Int]](Invalid(expectedErrors))
     }
   }
@@ -70,8 +78,8 @@ class VerificationSpec extends FlatSpec with Matchers with PropertyChecks with V
 
     forAll(cases) { case (validValues, invalidValues, message) =>
       val values = Random.shuffle(validValues ++ invalidValues)
-      val result: Validation[List[Int]] = new ListVerification[Int](new ValueVerification(x => x > 0, message)).verify(values)
-      val expectedErrors = values.zipWithIndex.filter(_._1 < 0).map{ case (_, index) => Error(s"[${index}]", message) }
+      val result: Validation[List[Int]] = new ListVerification[Int](isPositiveVerification(message)).verify(values)
+      val expectedErrors = values.zipWithIndex.filter(_._1 < 0).map { case (_, index) => Error(s"[${index}]", Message(message)) }
       result should beValidation[List[Int]](Invalid(expectedErrors))
     }
   }
@@ -83,14 +91,14 @@ class VerificationSpec extends FlatSpec with Matchers with PropertyChecks with V
     } yield (Some(n), message)
 
     forAll(cases) { case (nOption, message) =>
-      val result = new OptionVerification[Int](new ValueVerification(x => x > 0, message)).verify(nOption)
+      val result = new OptionVerification[Int](isPositiveVerification(message)).verify(nOption)
       result should === (Valid(nOption))
     }
   }
 
   it should "return a Valid value when the Option is empty" in {
     forAll(Generators.anyString) { message =>
-      val result = new OptionVerification[Int](new ValueVerification(x => x > 0, message)).verify(None)
+      val result = new OptionVerification[Int](isPositiveVerification(message)).verify(None)
       result should === (Valid(None))
     }
   }
@@ -102,8 +110,8 @@ class VerificationSpec extends FlatSpec with Matchers with PropertyChecks with V
     } yield (Some(value), message)
 
     forAll(cases) { case (nOption, message) =>
-      val result = new OptionVerification[Int](new ValueVerification(x => x > 0, message)).verify(nOption)
-      result should === (Invalid.root(message))
+      val result = new OptionVerification[Int](isPositiveVerification(message)).verify(nOption)
+      result should ===(Invalid.root(Message(message)))
     }
   }
 }

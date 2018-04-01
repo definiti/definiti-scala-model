@@ -1,0 +1,24 @@
+package my
+
+type Parent {
+  date: Date
+  child: Child
+
+  verify universe(now: Date) {
+    "Date should be after now"
+    (nominal) => {
+      nominal.date.isAfter(now)
+    }
+  }
+}
+
+type Child {
+  date: Date
+
+  verify universe(now: Date) {
+    "Date should be after tomorrow"
+    (child) => {
+      child.date.isAfter(now.plusDays(1))
+    }
+  }
+}

@@ -14,4 +14,11 @@ object ListUtils {
     }
     destination.toList
   }
+
+  def distinctBy[A, B](seq: Seq[A], key: A => B): Seq[A] = {
+    seq
+      .groupBy(key)
+      .map(_._2.head)
+      .toSeq
+  }
 }

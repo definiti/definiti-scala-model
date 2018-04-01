@@ -1,4 +1,4 @@
-package my.person
+package my.period
 
 type Period {
   start: Date
@@ -14,7 +14,7 @@ verification YearPeriod {
   "The period must last one year"
   (period: Period) => {
     // Not quite "right" but show the idea
-    // hypothese: timestamp in seconds
+    // hypothesis: timestamp in seconds
     period.end.timestamp - period.start.timestamp == 365*24*3600
   }
 }

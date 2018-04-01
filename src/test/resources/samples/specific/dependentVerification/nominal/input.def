@@ -1,0 +1,12 @@
+package my
+
+type Nominal {
+  date: Date
+
+  verify universe(now: Date) {
+    "Date should be after now"
+    (nominal) => {
+      nominal.date.isAfter(now)
+    }
+  }
+}

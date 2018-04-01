@@ -46,15 +46,15 @@ case class Invalid(errors: Seq[Error]) extends Validation[Nothing] {
 object Invalid {
   def apply(errors: Error*)(implicit dummyImplicit: DummyImplicit): Invalid = new Invalid(errors)
 
-  def apply(path: String, messages: String*): Invalid = Invalid(Error(path, messages))
+  def apply(path: String, messages: Message*): Invalid = Invalid(Error(path, messages))
 
-  def root(messages: Seq[String]): Invalid = Invalid(Error("", messages))
+  def root(messages: Seq[Message]): Invalid = Invalid(Error("", messages))
 
-  def root(messages: String*)(implicit dummyImplicit: DummyImplicit): Invalid = root(messages)
+  def root(messages: Message*)(implicit dummyImplicit: DummyImplicit): Invalid = root(messages)
 }
 
-case class Error(path: String, messages: Seq[String])
+case class Error(path: String, messages: Seq[Message])
 
 object Error {
-  def apply(path: String, messages: String*)(implicit dummyImplicit: DummyImplicit): Error = new Error(path, messages)
+  def apply(path: String, messages: Message*)(implicit dummyImplicit: DummyImplicit): Error = new Error(path, messages)
 }

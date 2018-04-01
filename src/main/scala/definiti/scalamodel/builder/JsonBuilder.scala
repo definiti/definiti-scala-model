@@ -19,9 +19,15 @@ trait JsonBuilder {
       jsonBuilder.buildWithoutValidation(definedType)
     }
   }
+
+  def jsonImports: Seq[ScalaAST.Import] = {
+    jsonBuilder.jsonImports
+  }
 }
 
 trait JsonBuilderStrategy {
+  def jsonImports: Seq[ScalaAST.Import]
+
   def buildWithValidation(definedType: DefinedType): Seq[ScalaAST.Statement]
 
   def buildWithoutValidation(definedType: DefinedType): Seq[ScalaAST.Statement]
@@ -31,7 +37,7 @@ object JsonBuilderStrategy {
   def extractUsedTypes(definedType: DefinedType, builder: ScalaModelBuilder): Seq[String] = {
     definedType
       .attributes
-      .map(_.typeReference)
+      .map(_.typeDeclaration)
       .map(builder.generateScalaType)
       .flatMap(extractConcreteTypes(_, builder))
       .filterNot(builder.isNative)
@@ -46,95 +52,93 @@ object JsonBuilderStrategy {
 }
 
 class SprayJsonBuilder(val builder: ScalaModelBuilder) extends JsonBuilderStrategy {
+  override def jsonImports: Seq[ScalaAST.Import] = Seq(
+    ScalaAST.Import("spray.json.RootJsonFormat"),
+    ScalaAST.Import("definiti.native.JsonSpraySupport._")
+  )
+
   def buildWithValidation(definedType: DefinedType): Seq[ScalaAST.Statement] = {
     Seq(
-      ScalaAST.Import("spray.json.RootJsonFormat"),
-      ScalaAST.Import("definiti.native.JsonSpraySupport._"),
-      rawFormatWithValidation(definedType),
       ScalaAST.ClassVal(
-        name = s"${definedType.name}Format",
+        name = s"rawFormat",
+        typ = s"RootJsonFormat[${definedType.name}]",
+        body = rawFormatBody(definedType)
+      ),
+      ScalaAST.ClassVal(
+        name = s"format",
         typ = s"RootJsonFormat[${definedType.name}]",
         isImplicit = true,
-        body = Seq(formatWithValidation(definedType))
+        body = Seq(ScalaAST.CallFunction(
+          "formatWithValidation",
+          ScalaAST.SimpleExpression("rawFormat"),
+          ScalaAST.SimpleExpression("verification")
+        ))
       )
     )
   }
 
-  private def rawFormatWithValidation(definedType: DefinedType): ScalaAST.Statement = {
-    ScalaAST.ClassVal(
-      name = s"${definedType.name}RawFormat",
-      typ = s"RootJsonFormat[${definedType.name}]",
-      body = implicitAttributes(definedType) :+ rawFormatBody(definedType)
-    )
+  private def rawFormatBody(definedType: DefinedType): Seq[ScalaAST.Statement] = {
+    implicitAttributes(definedType) :+ rawFormatCall(definedType)
   }
 
-  private def rawFormatBody(definedType: DefinedType): ScalaAST.Expression = {
+  private def implicitAttributes(definedType: DefinedType): Seq[ScalaAST.Statement] = {
+    JsonBuilderStrategy.extractUsedTypes(definedType, builder)
+      .map { mainType =>
+        ScalaAST.Val(
+          name = s"${mainType}Format",
+          value = ScalaAST.CallAttribute(mainType, "rawFormat"),
+          isImplicit = true
+        )
+      }
+  }
+
+  private def rawFormatCall(definedType: DefinedType): ScalaAST.Expression = {
     ScalaAST.CallFunction(
       s"jsonFormat${definedType.attributes.length}",
       ScalaAST.SimpleExpression(s"${definedType.name}.apply")
     )
   }
 
-  private def implicitAttributes(definedType: DefinedType): Seq[ScalaAST.Statement] = {
-    JsonBuilderStrategy.extractUsedTypes(definedType, builder)
-      .map { mainType =>
-        ScalaAST.Val(
-          name = s"${mainType}Format",
-          value = ScalaAST.CallAttribute(mainType, s"${mainType}RawFormat"),
-          isImplicit = true
-        )
-      }
-  }
-
-  private def formatWithValidation(definedType: DefinedType): ScalaAST.CallFunction = {
-    ScalaAST.CallFunction(
-      target = ScalaAST.SimpleExpression("formatWithValidation"),
-      arguments = Seq(
-        ScalaAST.SimpleExpression(s"${definedType.name}RawFormat"),
-        ScalaAST.SimpleExpression("allVerifications")
-      )
-    )
-  }
-
   def buildWithoutValidation(definedType: DefinedType): Seq[ScalaAST.Statement] = {
     Seq(
-      ScalaAST.Import("spray.json.RootJsonFormat"),
-      ScalaAST.Import("definiti.native.JsonSpraySupport._"),
       ScalaAST.ClassVal(
-        name = s"${definedType.name}Format",
+        name = s"rawFormat",
         typ = s"RootJsonFormat[${definedType.name}]",
         isImplicit = true,
-        body = Seq(rawFormatBody(definedType))
+        body = rawFormatBody(definedType)
       )
     )
   }
 }
 
 class PlayJsonBuilder(val builder: ScalaModelBuilder) extends JsonBuilderStrategy {
+  override def jsonImports: Seq[ScalaAST.Import] = Seq(
+    ScalaAST.Import("play.api.libs.json._"),
+    ScalaAST.Import("definiti.native.JsonPlaySupport._")
+  )
+
   def buildWithValidation(definedType: DefinedType): Seq[ScalaAST.Statement] = {
     Seq(
-      ScalaAST.Import("play.api.libs.json._"),
-      ScalaAST.Import("definiti.native.JsonPlaySupport._"),
-      rawFormatWithValidation(definedType),
       ScalaAST.ClassVal(
-        name = s"${definedType.name}Format",
+        name = s"rawFormat",
+        typ = s"OFormat[${definedType.name}]",
+        body = rawFormatBody(definedType)
+      ),
+      ScalaAST.ClassVal(
+        name = s"format",
         typ = s"OFormat[${definedType.name}]",
         isImplicit = true,
         body = Seq(ScalaAST.CallFunction(
           "formatWithValidation",
-          ScalaAST.SimpleExpression(s"${definedType.name}RawFormat"),
-          ScalaAST.SimpleExpression("allVerifications")
+          ScalaAST.SimpleExpression("rawFormat"),
+          ScalaAST.SimpleExpression("verification")
         ))
       )
     )
   }
 
-  private def rawFormatWithValidation(definedType: DefinedType): ScalaAST.Statement = {
-    ScalaAST.ClassVal(
-      name = s"${definedType.name}RawFormat",
-      typ = s"OFormat[${definedType.name}]",
-      body = implicitAttributes(definedType) :+ rawFormatBody(definedType)
-    )
+  private def rawFormatBody(definedType: DefinedType): Seq[ScalaAST.Statement] = {
+    implicitAttributes(definedType) :+ rawFormatCall(definedType)
   }
 
   private def implicitAttributes(definedType: DefinedType): Seq[ScalaAST.Statement] = {
@@ -142,31 +146,31 @@ class PlayJsonBuilder(val builder: ScalaModelBuilder) extends JsonBuilderStrateg
       .map { mainType =>
         ScalaAST.Val(
           name = s"${mainType}Format",
-          value = ScalaAST.CallAttribute(mainType, s"${mainType}RawFormat"),
+          value = ScalaAST.CallAttribute(mainType, "rawFormat"),
           isImplicit = true
         )
       }
   }
 
-  private def rawFormatBody(definedType: DefinedType): ScalaAST.Expression = {
+  private def rawFormatCall(definedType: DefinedType): ScalaAST.Expression = {
     ScalaAST.CallAttribute("Json", s"format[${definedType.name}]")
   }
 
   def buildWithoutValidation(definedType: DefinedType): Seq[ScalaAST.Statement] = {
     Seq(
-      ScalaAST.Import("play.api.libs.json._"),
-      ScalaAST.Import("definiti.native.JsonPlaySupport._"),
       ScalaAST.ClassVal(
-        name = s"${definedType.name}Format",
+        name = s"rawFormat",
         typ = s"OFormat[${definedType.name}]",
         isImplicit = true,
-        body = Seq(rawFormatBody(definedType))
+        body = rawFormatBody(definedType)
       )
     )
   }
 }
 
 object NoJsonBuilder extends JsonBuilderStrategy {
+  override def jsonImports: Seq[ScalaAST.Import] = Seq.empty
+
   override def buildWithValidation(definedType: DefinedType): Seq[ScalaAST.Statement] = Seq.empty
 
   override def buildWithoutValidation(definedType: DefinedType): Seq[ScalaAST.Statement] = Seq.empty

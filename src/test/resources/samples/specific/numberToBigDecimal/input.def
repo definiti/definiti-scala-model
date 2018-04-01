@@ -5,5 +5,5 @@ def twice(n: Number): Number => {
 }
 
 def sum(values: List[Number]): Number => {
-  values.foldLeft(0, (acc: Number, current: Number) => {acc + current})
+  values.foldLeft[Number](0, (acc: Number, current: Number) => {acc + current})
 }
