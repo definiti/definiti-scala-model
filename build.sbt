@@ -6,7 +6,7 @@ name := "scala-model"
 
 version := "0.3.0-SNAPSHOT"
 
-scalaVersion := "2.12.4"
+scalaVersion := "2.12.5"
 
 resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
 
@@ -20,6 +20,7 @@ libraryDependencies += "com.github.pathikrit" %% "better-files" % "3.4.0"
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.4" % "test"
 libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.13.5" % "test"
 libraryDependencies += "com.47deg" %% "scalacheck-toolbox-datetime" % "0.2.3" % "test"
+libraryDependencies += "io.github.definiti" % "api" % "0.3.0-SNAPSHOT" % "test"
 
 libraryDependencies += "com.typesafe.play" %% "play-json" % "2.6.8" % "test"
 
