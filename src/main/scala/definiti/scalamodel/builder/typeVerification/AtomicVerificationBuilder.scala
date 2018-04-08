@@ -108,9 +108,18 @@ trait AtomicVerificationBuilder {
     val verification = library.verificationsMap(verificationReference.verificationName)
     ScalaAST.New(
       name = verification.fullName,
-      generics = ListUtils.replaceOrdered(verification.function.genericTypes, aliasOrDefinedType.genericTypes),
+      generics = replaceGenerics(verification.function.genericTypes, aliasOrDefinedType),
       arguments = verificationReference.parameters.map(generateExpression)
     )
+  }
+
+  private def replaceGenerics(generics: Seq[String], aliasOrDefinedType: AliasOrDefinedType): Seq[String] = {
+    aliasOrDefinedType.internal match {
+      case aliasType: AliasType =>
+        aliasType.alias.genericTypes.map(_.readableString)
+      case _ =>
+        ListUtils.replaceOrdered(generics, aliasOrDefinedType.genericTypes)
+    }
   }
 
   private def generateAtomicInternalVerifications(aliasOrDefinedType: AliasOrDefinedType): Seq[ScalaAST.Expression] = {

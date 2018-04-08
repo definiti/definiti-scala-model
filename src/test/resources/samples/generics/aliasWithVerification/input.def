@@ -1,0 +1,8 @@
+type NonEmptyStringList = List[String] verifying ListIsNonEmpty
+
+verification ListIsNonEmpty {
+  "The list should not be empty"
+  [A](list: List[A]) => {
+    list.nonEmpty()
+  }
+}
