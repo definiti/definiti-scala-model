@@ -1,6 +1,6 @@
 package definiti.native
 
-import definiti.common.{Generators, ValidationMatcher}
+import definiti.utils.{Generators, ValidationMatcher}
 import org.scalacheck.Gen
 import org.scalatest.prop.PropertyChecks
 import org.scalatest.{FlatSpec, Matchers}

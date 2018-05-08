@@ -1,6 +1,6 @@
 package definiti.scalamodel.builder
 
-import definiti.core.ast.Namespace
+import definiti.common.ast.Namespace
 import definiti.scalamodel.ScalaAST
 
 import scala.collection.mutable.ListBuffer

@@ -1,6 +1,6 @@
 package definiti.native
 
-import definiti.common.Generators
+import definiti.utils.Generators
 import org.scalatest.prop.PropertyChecks
 import org.scalatest.{FlatSpec, Matchers}
 

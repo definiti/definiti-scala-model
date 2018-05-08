@@ -1,6 +1,6 @@
 package definiti.scalamodel.model
 
-import definiti.core.ast._
+import definiti.common.ast._
 
 case class AliasOrDefinedType(
   name: String,

@@ -1,6 +1,6 @@
 package definiti.scalamodel.builder
 
-import definiti.core.ast.{Library, Namespace, Root}
+import definiti.common.ast.{Library, Namespace, Root}
 import definiti.scalamodel.builder.typeVerification.TypeVerificationBuilder
 import definiti.scalamodel.{Configuration, ScalaAST}
 
@@ -17,29 +17,18 @@ class ScalaModelBuilder(val config: Configuration, val library: Library)
     with VerificationBuilder {
 
   def build(root: Root): ScalaAST.Root = {
-    val rootNamespace = Namespace(
-      name = "",
-      fullName = "",
-      elements = root.elements
-    )
-    val directElements = buildNamespaceContent(rootNamespace)
-    val packageElements = root.elements.collect {
-      case namespace: Namespace => buildPackage(namespace)
-    }
     ScalaAST.Root(
-      elements = directElements ++ packageElements
+      packages = root.namespaces
+        .map(buildPackage)
+        .filter(_.elements.nonEmpty)
     )
   }
 
   private def buildPackage(namespace: Namespace): ScalaAST.Package = {
-    val directElements = buildNamespaceContent(namespace)
-    val packageElements = namespace.elements.collect {
-      case namespace: Namespace => buildPackage(namespace)
-    }
     ScalaAST.Package(
-      namespace.fullName,
+      if (namespace.fullName.isEmpty) "root" else namespace.fullName,
       imports = extractImportsFromNamespace(namespace) ++ jsonImports,
-      elements = directElements ++ packageElements
+      elements = buildNamespaceContent(namespace)
     )
   }
 

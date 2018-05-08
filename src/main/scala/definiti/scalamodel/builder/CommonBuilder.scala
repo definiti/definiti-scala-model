@@ -1,6 +1,6 @@
 package definiti.scalamodel.builder
 
-import definiti.core.ast._
+import definiti.common.ast._
 import definiti.scalamodel.ScalaAST
 
 trait CommonBuilder {

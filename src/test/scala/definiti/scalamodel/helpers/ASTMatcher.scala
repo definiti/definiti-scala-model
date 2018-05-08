@@ -1,6 +1,7 @@
 package definiti.scalamodel.helpers
 
-import definiti.core.{Alert, Ko, Ok, ProgramResult}
+import definiti.common.program.{Ko, Ok, ProgramResult}
+import definiti.common.validation.Alert
 import definiti.scalamodel.ScalaAST.Root
 import org.scalatest.matchers.{MatchResult, Matcher}
 

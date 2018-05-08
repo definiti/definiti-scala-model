@@ -1,4 +1,4 @@
-package definiti.common
+package definiti.utils
 
 import definiti.native.{Invalid, Valid, Validation}
 import org.scalatest.matchers.{MatchResult, Matcher}

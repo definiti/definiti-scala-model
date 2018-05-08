@@ -1,6 +1,6 @@
 package definiti.scalamodel.builder
 
-import definiti.core.ast.DefinedType
+import definiti.common.ast.DefinedType
 import definiti.scalamodel.{JsonFormat, ScalaAST}
 
 trait JsonBuilder {

@@ -2,12 +2,12 @@ package definiti.scalamodel.plugin
 
 import java.nio.file.Path
 
-import definiti.core._
-import definiti.core.ast.{Library, Root}
-import definiti.scalamodel.{FileConfiguration, JsonFormat}
+import definiti.common.ast.{Library, Root}
+import definiti.common.plugin.GeneratorPlugin
 import definiti.scalamodel.builder.ScalaModelBuilder
 import definiti.scalamodel.generator.ScalaProjectGenerator
 import definiti.scalamodel.utils.Resource
+import definiti.scalamodel.{FileConfiguration, JsonFormat}
 
 class ScalaModelGeneratorPlugin extends GeneratorPlugin {
   val config = new FileConfiguration()

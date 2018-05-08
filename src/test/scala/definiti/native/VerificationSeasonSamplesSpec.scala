@@ -2,8 +2,8 @@ package definiti.native
 
 import java.time.LocalDateTime
 
-import definiti.common.Generators
-import definiti.common.ValidationMatcher
+import definiti.utils.Generators
+import definiti.utils.ValidationMatcher
 import org.scalacheck.Gen
 import org.scalatest.prop.PropertyChecks
 import org.scalatest.{FlatSpec, Matchers}

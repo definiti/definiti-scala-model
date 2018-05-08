@@ -1,4 +1,4 @@
-package definiti.common
+package definiti.utils
 
 import com.fortysevendeg.scalacheck.datetime.jdk8.GenJdk8
 import org.scalacheck.Gen

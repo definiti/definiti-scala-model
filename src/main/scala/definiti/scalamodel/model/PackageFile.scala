@@ -1,6 +1,6 @@
 package definiti.scalamodel.model
 
-import definiti.core.ast.{AliasType, NamedFunction, Verification}
+import definiti.common.ast.{AliasType, NamedFunction, Verification}
 
 case class PackageFile(
   packageName: String,

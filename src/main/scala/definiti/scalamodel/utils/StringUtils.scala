@@ -1,17 +1,9 @@
 package definiti.scalamodel.utils
 
+import definiti.common.utils.{StringUtils => CoreStringUtils}
+
 object StringUtils {
-  def lastPart(source: String, separator: Char = '.'): String = {
-    if (source.isEmpty) {
-      source
-    } else if (source.last == separator) {
-      lastPart(source.substring(0, source.length - 1), separator)
-    } else if (source.contains(separator)) {
-      source.substring(source.lastIndexOf(separator) + 1)
-    } else {
-      source
-    }
-  }
+  def lastPart(source: String, separator: Char = '.'): String = CoreStringUtils.lastPart(source, separator)
 
   def excludeLastPart(source: String, separator: Char = '.'): String = {
     if (source.isEmpty) {

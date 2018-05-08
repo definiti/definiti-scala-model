@@ -2,7 +2,10 @@ package definiti.scalamodel.helpers
 
 import java.nio.file.{Files, Paths}
 
-import definiti.core.{Configuration => CoreConfiguration, _}
+import definiti.common.program.{Ko, Ok, ProgramResult}
+import definiti.common.tests.TestProjectExecution
+import definiti.common.tests.{ConfigurationMock => CoreConfigurationMock}
+import definiti.core.Project
 import definiti.scalamodel.builder.ScalaModelBuilder
 import definiti.scalamodel.generator.ScalaProjectGenerator
 import definiti.scalamodel.{Configuration, ScalaAST}
@@ -10,24 +13,12 @@ import org.scalatest.{FlatSpec, Matchers}
 
 import scala.collection.JavaConverters._
 
-trait EndToEndSpec extends FlatSpec with Matchers with ASTMatcher {
-  def processDirectory(sample: String, configuration: Configuration = ConfigurationMock()): ProgramResult[ScalaAST.Root] = {
-    process(configurationDirectory(sample), configuration)
+trait EndToEndSpec extends FlatSpec with Matchers with TestProjectExecution with ASTMatcher {
+  def processFile(sample: String): ProgramResult[ScalaAST.Root] = {
+    process(configurationFile(sample), ConfigurationMock())
   }
 
-  def configurationDirectory(sample: String): CoreConfiguration = {
-    CoreConfigurationMock(
-      source = Paths.get(s"src/test/resources/samples/${sample.replaceAll("\\.", "/")}"),
-      apiSource = Paths.get(s"src/main/resources/api"),
-      contexts = Seq()
-    )
-  }
-
-  def processFile(sample: String, configuration: Configuration = ConfigurationMock()): ProgramResult[ScalaAST.Root] = {
-    process(configurationFile(sample), configuration)
-  }
-
-  def configurationFile(sample: String): CoreConfiguration = {
+  def configurationFile(sample: String): CoreConfigurationMock = {
     CoreConfigurationMock(
       source = Paths.get(s"src/test/resources/samples/${sample.replaceAll("\\.", "/")}.def"),
       apiSource = Paths.get(s"src/main/resources/api"),
@@ -35,14 +26,14 @@ trait EndToEndSpec extends FlatSpec with Matchers with ASTMatcher {
     )
   }
 
-  private def process(coreConfiguration: CoreConfiguration, configuration: Configuration): ProgramResult[ScalaAST.Root] = {
+  private def process(coreConfiguration: CoreConfigurationMock, configuration: Configuration): ProgramResult[ScalaAST.Root] = {
     val project = new Project(coreConfiguration)
     project.generateStructureWithLibrary()
       .map { case (ast, library) =>
         val builder = new ScalaModelBuilder(configuration, library)
         builder.build(ast)
       }
-      .run(coreConfiguration)
+      .run(coreConfiguration.programConfiguration)
   }
 
   def processSample(sample: String, configuration: Configuration = ConfigurationMock()): Any = {

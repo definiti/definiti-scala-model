@@ -1,6 +1,6 @@
 package definiti.scalamodel.builder.typeVerification
 
-import definiti.core.ast._
+import definiti.common.ast._
 import definiti.scalamodel.ScalaAST
 import definiti.scalamodel.builder.ScalaModelBuilder
 

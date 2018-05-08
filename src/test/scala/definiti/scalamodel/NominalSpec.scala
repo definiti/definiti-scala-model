@@ -34,5 +34,5 @@ class NominalSpec extends EndToEndSpec {
 
 
 object NominalSpec {
-  val extendedContext: Root = Root()
+  val extendedContext: Root = Root(Seq.empty)
 }

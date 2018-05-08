@@ -8,14 +8,8 @@ object ScalaAST {
   case class ScalaFile(path: Path, content: String)
 
   case class Root(
-    elements: Seq[PackageElement]
+    packages: Seq[Package]
   )
-
-  object Root {
-    def apply(elements: PackageElement*)(implicit dummyImplicit: DummyImplicit): Root = {
-      new Root(elements)
-    }
-  }
 
   sealed trait PackageElement
 
@@ -23,7 +17,7 @@ object ScalaAST {
     name: String,
     imports: Seq[Import],
     elements: Seq[PackageElement]
-  ) extends PackageElement
+  )
 
   object Package {
     def apply(name: String, imports: Seq[Import], elements: PackageElement*)(implicit dummyImplicit: DummyImplicit): Package = {
