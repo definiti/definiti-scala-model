@@ -2,6 +2,7 @@ package definiti.scalamodel.helpers
 
 import java.nio.file.{Files, Paths}
 
+import cats.implicits._
 import definiti.common.program.{Ko, Ok, ProgramResult}
 import definiti.common.tests.TestProjectExecution
 import definiti.common.tests.{ConfigurationMock => CoreConfigurationMock}

@@ -91,8 +91,8 @@ final class ValueVerification[A](definedVerification: DefinedVerification[A]) ex
   }
 }
 
-final class ListVerification[A](verification: Verification[A] = Verification.none[A]) extends Verification[List[A]] {
-  override private[native] def validate[B <: List[A]](path: String, value: B) = {
+final class ListVerification[A](verification: Verification[A] = Verification.none[A]) extends Verification[Seq[A]] {
+  override private[native] def validate[B <: Seq[A]](path: String, value: B) = {
     val validations = value.zipWithIndex.map {
       case (current, index) => verification.validate(path + s"[${index}]", current)
     }

@@ -10,7 +10,7 @@ trait CommonBuilder {
     "Any" -> "Any",
     "Boolean" -> "Boolean",
     "Date" -> "LocalDateTime",
-    "List" -> "List",
+    "List" -> "Seq",
     "Number" -> "BigDecimal",
     "Option" -> "Option",
     "String" -> "String",
