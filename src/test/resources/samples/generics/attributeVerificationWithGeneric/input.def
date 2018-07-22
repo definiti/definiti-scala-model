@@ -1,0 +1,12 @@
+package my
+
+type MyType {
+  attribute: List[String] verifying IsNonEmpty
+}
+
+verification IsNonEmpty {
+  "This list should not be empty"
+  [A](list: List[A]) => {
+    list.nonEmpty()
+  }
+}

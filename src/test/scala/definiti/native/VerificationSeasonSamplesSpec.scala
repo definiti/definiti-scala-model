@@ -122,8 +122,8 @@ object VerificationSeasonSamplesSpec {
     }
 
     val activitiesInvalidMessage = "Please provide at least one activity"
-    val atLeastOneActivityVerification = new SimpleVerification[List[String]](activitiesInvalidMessage) {
-      override def isValid(activities: List[String]) = activities.nonEmpty
+    val atLeastOneActivityVerification = new SimpleVerification[Seq[String]](activitiesInvalidMessage) {
+      override def isValid(activities: Seq[String]) = activities.nonEmpty
     }
 
     val activitiesVerification = Verification.all(new ListVerification[String](nonEmptyActivityVerification), atLeastOneActivityVerification)

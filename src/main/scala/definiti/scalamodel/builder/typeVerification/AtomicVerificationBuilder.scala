@@ -48,7 +48,7 @@ trait AtomicVerificationBuilder {
 
   private def generateAttributeVerifications(attributeDefinition: AttributeDefinition, definedType: DefinedType): Option[ScalaAST.Expression] = {
     val typeVerification = generateTypeVerificationCall(attributeDefinition.typeDeclaration)
-    val directVerifications = attributeDefinition.verifications.map(generateVerificationCall(_, definedType))
+    val directVerifications = attributeDefinition.verifications.map(generateVerificationCall(_, attributeDefinition.typeDeclaration))
     val deepVerification = generateDeepVerification(attributeDefinition.typeDeclaration)
     val verifications = typeVerification ++ directVerifications ++ deepVerification
     val groupVerificationOpt = generateGroupVerification(attributeDefinition.typeDeclaration, verifications)
@@ -120,6 +120,15 @@ trait AtomicVerificationBuilder {
       case _ =>
         ListUtils.replaceOrdered(generics, aliasOrDefinedType.genericTypes)
     }
+  }
+
+  private def generateVerificationCall(verificationReference: VerificationReference, typeDeclaration: TypeDeclaration): ScalaAST.Expression = {
+    val verification = library.verificationsMap(verificationReference.verificationName)
+    ScalaAST.New(
+      name = verification.fullName,
+      generics = ListUtils.replaceOrdered(verification.function.genericTypes, typeDeclaration.genericTypes.map(_.readableString)),
+      arguments = verificationReference.parameters.map(generateExpression)
+    )
   }
 
   private def generateAtomicInternalVerifications(aliasOrDefinedType: AliasOrDefinedType): Seq[ScalaAST.Expression] = {
