@@ -4,37 +4,35 @@ organization := "io.github.definiti"
 
 name := "scala-model"
 
-version := "0.3.0-SNAPSHOT"
-
 scalaVersion := "2.12.6"
 
 resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
 
-libraryDependencies += "io.github.definiti" %% "core" % "0.3.0-SNAPSHOT"
+libraryDependencies += "io.github.definiti" %% "core" % "0.3.0"
 libraryDependencies += "commons-io" % "commons-io" % "2.6"
-libraryDependencies += "com.typesafe" % "config" % "1.3.2"
-libraryDependencies += "com.typesafe.scala-logging" %% "scala-logging" % "3.7.2"
+libraryDependencies += "com.typesafe" % "config" % "1.3.3"
+libraryDependencies += "com.typesafe.scala-logging" %% "scala-logging" % "3.9.0"
 libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.7.25"
-libraryDependencies += "com.github.pathikrit" %% "better-files" % "3.4.0"
+libraryDependencies += "com.github.pathikrit" %% "better-files" % "3.6.0"
 
-libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.4" % "test"
-libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.13.5" % "test"
-libraryDependencies += "com.47deg" %% "scalacheck-toolbox-datetime" % "0.2.3" % "test"
-libraryDependencies += "io.github.definiti" % "api" % "0.3.0-SNAPSHOT" % "test"
+libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.5" % "test"
+libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.14.0" % "test"
+libraryDependencies += "com.47deg" %% "scalacheck-toolbox-datetime" % "0.2.5" % "test"
+libraryDependencies += "io.github.definiti" % "api" % "0.3.0" % "test"
 
-libraryDependencies += "com.typesafe.play" %% "play-json" % "2.6.8" % "test"
+libraryDependencies += "com.typesafe.play" %% "play-json" % "2.6.9" % "test"
 
 scalacOptions ++= Seq("-unchecked", "-deprecation", "-language:implicitConversions", "-feature")
 
 unmanagedSourceDirectories in Test += baseDirectory.value / "src" / "main" / "resources" / "native"
 
-useGpg := true
+releasePublishArtifactsAction := PgpKeys.publishSigned.value
 
 pomIncludeRepository := { _ => false }
 
 licenses := Seq("MIT" -> url("http://opensource.org/licenses/MIT"))
 
-homepage := Some(url("https://definiti.github.io"))
+homepage := Some(url("https://definiti.gitbook.io/definiti"))
 
 scmInfo := Some(
   ScmInfo(
@@ -45,10 +43,10 @@ scmInfo := Some(
 
 developers := List(
   Developer(
-    id = "kneelnrise",
+    id = "grizio",
     name = "Gaëtan Rizio",
     email = "gaetan@rizio.fr",
-    url = url("https://github.com/kneelnrise")
+    url = url("https://github.com/grizio")
   )
 )
 
